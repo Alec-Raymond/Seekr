@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A4BC90FF2CAF0FCE00C60ED1 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = A4BC90FE2CAF0FC600C60ED1 /* README.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		A4BC90E22CAF0F3300C60ED1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		A4BC90CC2CAF0F3200C60ED1 /* Seekr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Seekr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A4BC90E12CAF0F3300C60ED1 /* SeekrTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SeekrTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A4BC90EB2CAF0F3300C60ED1 /* SeekrUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SeekrUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A4BC90FE2CAF0FC600C60ED1 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -75,6 +80,7 @@
 		A4BC90C32CAF0F3200C60ED1 = {
 			isa = PBXGroup;
 			children = (
+				A4BC90FE2CAF0FC600C60ED1 /* README.md */,
 				A4BC90CE2CAF0F3200C60ED1 /* Seekr */,
 				A4BC90E42CAF0F3300C60ED1 /* SeekrTests */,
 				A4BC90EE2CAF0F3300C60ED1 /* SeekrUITests */,
@@ -212,6 +218,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A4BC90FF2CAF0FCE00C60ED1 /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
