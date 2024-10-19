@@ -1,0 +1,87 @@
+//
+//  LoginView.swift
+//  FirebaseTest
+//
+//  Created by Taya Ambrose on 10/18/24.
+//
+
+import SwiftUI
+
+struct LoginView: View {
+    @State private var email: String = ""
+    @State private var password: String = ""
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.blue
+                    .ignoresSafeArea()
+                Circle()
+                    .scale(1.8)
+                    .foregroundColor(.white.opacity(0.15))
+                Circle()
+                    .scale(1.45)
+                    .foregroundColor(.white.opacity(0.15))
+                Circle()
+                    .scale(1.25)
+                    .foregroundColor(.white)
+                
+                VStack {
+                    // Image
+                    Image("Logo")
+                        .padding() //.padding(.vertical, 32)
+                    
+                    // Form Fields
+                    VStack(spacing: 24){
+                        InputView(text: $email,
+                                  title: "Email Address",
+                                  placeholder: "Enter your email")
+                        // .autocapitalisation(.none)
+                        
+                        InputView(text: $password,
+                                  title: "Password",
+                                  placeholder: "Enter your password",
+                                  isSecureField: true)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 12)
+                    
+                    // Sign in button
+                    
+                    Button{
+                        print("Signing in...")
+                    } label: {
+                        HStack{
+                            Text("Sign in")
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.white)
+                        .frame(width: UIScreen.main.bounds.width - 32, height: 48) // flag
+                    }
+                    .background(Color(.blue))
+                    .cornerRadius(10)
+                    .padding()
+                    
+                    //Spacer() // makes logo at top
+                    
+                    // Sign up button
+                    
+                    NavigationLink{
+                        RegistrationView()
+                            .navigationBarBackButtonHidden()
+                    } label: {
+                        HStack(spacing: 3){
+                            Text("Don't have an account?")
+                            Text("Sign up")
+                                .fontWeight(.bold)
+                        }
+                    }
+            }
+                
+            }
+        }
+    }
+}
+
+#Preview {
+    LoginView()
+}

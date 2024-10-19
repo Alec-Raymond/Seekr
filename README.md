@@ -14,7 +14,10 @@ Using Google Maps is boring. Using physical maps is outdated, impractical, and s
 
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 3ae2449 (test push with README)
 ### October 18th Updates ###
 
 - Hey guys :) I added some new folders for organization. Here are the paths for accessing things:
@@ -25,5 +28,8 @@ Using Google Maps is boring. Using physical maps is outdated, impractical, and s
 - User formatting page:                 Seekr/Model/User
 - Text Field shortcut:                  Seekr/Components/InputView
 - Settings Field shortcut:              Seekr/Components/SettingsRowView
+<<<<<<< HEAD
 
 Registration is working, Login is almost fully set up. Need to do the last linking.
+=======
+>>>>>>> 3ae2449 (test push with README)
