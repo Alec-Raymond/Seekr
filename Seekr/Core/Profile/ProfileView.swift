@@ -5,6 +5,13 @@
 //  Created by Taya Ambrose on 10/18/24.
 //
 
+// This file contains the user profile page for the app.
+// So far it has fields for displaying general version of
+// the app and options to sign out (not done) and delete
+// account (not done). This is all subject to change.
+
+// Please comment the changes you make and leave your name.
+
 import SwiftUI
 
 struct ProfileView: View {

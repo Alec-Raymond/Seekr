@@ -5,6 +5,11 @@
 //  Created by Taya Ambrose on 10/18/24.
 //
 
+// This file contains registration page. This is linked to
+// Firebase, and everything is set up.
+
+// Please comment the changes you make and leave your name.
+
 import SwiftUI
 
 struct RegistrationView: View {
@@ -71,7 +76,6 @@ struct RegistrationView: View {
                         .fontWeight(.bold)
                 }
             }
-            
         }
     }
 }

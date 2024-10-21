@@ -1,9 +1,16 @@
 //
 //  InputView.swift
-//  FirebaseTest
+//  Seekr
 //
 //  Created by Taya Ambrose on 10/18/24.
 //
+
+// This file contains the struture for text input fields
+// like emails, names, passwords, etc. It is not displayed,
+// this file is referenced to keep code clean without
+// duplicating the textbox.
+
+// Please comment the changes you make and leave your name.
 
 import SwiftUI
 

@@ -5,6 +5,10 @@
 //  Created by Taya Ambrose on 10/18/24.
 //
 
+// This file contains the inner workings of the user.
+
+// Please comment any changes you make and your name.
+
 import Foundation
 
 struct User: Identifiable, Codable {

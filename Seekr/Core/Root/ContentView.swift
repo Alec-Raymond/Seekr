@@ -5,7 +5,9 @@
 //  Created by Alec Raymond on 10/3/24.
 //
 
+// This file contains the basic structure of the app.
 
+// Please comment any changes you make and your name.
 
 import SwiftUI
 

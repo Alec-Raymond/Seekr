@@ -5,6 +5,13 @@
 //  Created by Taya Ambrose on 10/18/24.
 //
 
+// This file contains the struture for settings bars in
+// the user profile page. This file is not displayed,
+// it is referenced to keep code clean without
+// duplicating the body.
+
+// Please comment the changes you make and leave your name.
+
 import SwiftUI
 
 struct SettingsRowView: View {

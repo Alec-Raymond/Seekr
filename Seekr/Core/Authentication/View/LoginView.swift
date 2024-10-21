@@ -5,6 +5,12 @@
 //  Created by Taya Ambrose on 10/18/24.
 //
 
+// This file contains the login page. This is currently not
+//fully complete. The sign in button is not set up yet.
+// Waiting on Database things.
+
+// Please comment the changes you make and leave your name.
+
 import SwiftUI
 
 struct LoginView: View {
@@ -47,7 +53,7 @@ struct LoginView: View {
                     .padding(.horizontal,30)
                     .padding(.top, 12)
                     
-                    // Sign in button
+                    // Sign in button -- not done
                     
                     Button{
                         Task {
