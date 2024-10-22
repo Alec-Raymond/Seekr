@@ -23,7 +23,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     let locationManager = CLLocationManager()
     lazy var mapView: MKMapView = {
         let map = MKMapView()
-        map.showsUserLocation = true
+        // map.showsUserLocation = true
         map.translatesAutoresizingMaskIntoConstraints = false
         return map
     }()
@@ -43,6 +43,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         super.viewDidLoad()
         locationManager.delegate = self
         searchCompleter.delegate = self
+        mapView.delegate = self
         
         tableView.delegate = self // Set the delegate
         tableView.dataSource = self
@@ -75,8 +76,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-            //centerViewOnUserLocation()
-        }
+        centerViewOnUserLocation()
+    }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         checkLocationAuthorization()
@@ -133,10 +134,11 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         print("Selected: \(selectedResult.title), \(selectedResult.subtitle)")
         
         // Handle the selected result (e.g., perform a search, update UI, etc.)
-        convertAddressToAnnotation(name: selectedResult.title, address: selectedResult.subtitle, camera: true)
+        convertAddressToAnnotation(name: selectedResult.title, address: selectedResult.subtitle, camera: true, path: true)
+        //centerMapOnCoordinates(coord1: annotationList.last?.coordinate, coord2: <#T##CLLocationCoordinate2D#>)
     }
     
-    func convertAddressToAnnotation(name: String, address: String, camera: Bool = false) {
+    func convertAddressToAnnotation(name: String, address: String, camera: Bool = false, path: Bool = false) {
         geocoder.geocodeAddressString(address) { (placemarks, error) in
             if let error = error {
                 print("Error: \(error.localizedDescription)")
@@ -164,14 +166,19 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
                     self.centerMapOnCoordinates(coord1: userLocation, coord2: coordinate)
                 }
             }
+            if (path) {
+                if let userLocation = self.locationManager.location?.coordinate {
+                    self.createPath(from: userLocation, to: coordinate)
+                }
+            }
         }
     }
     
     func centerMapOnCoordinates(coord1: CLLocationCoordinate2D, coord2: CLLocationCoordinate2D) {
         let camera = MKMapCamera()
         
-        let midLatitude = (coord1.latitude + coord2.latitude) / 2.0
-        let midLongitude = (coord1.longitude + coord2.longitude) / 2.0
+        let midLatitude = (2.4 * coord1.latitude + coord2.latitude) / 3.4
+        let midLongitude = (2.4 * coord1.longitude + coord2.longitude) / 3.4
         let center = CLLocationCoordinate2D(latitude: midLatitude, longitude: midLongitude)
         
         let location1 = CLLocation(latitude: coord1.latitude, longitude: coord1.longitude)
@@ -179,10 +186,10 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         let distance = location1.distance(from: location2)
         let bearing = calculateBearing(from: coord1, to: coord2)
         
-        // This is currently not super robust, needs to be dialed in
-        // Also blocked by the temporary UI
+        print(distance)
+        //center.longitude = center.longitude + (abs(distance) / 50000)
         camera.centerCoordinate = center
-        camera.centerCoordinateDistance = 4.5 * distance
+        camera.centerCoordinateDistance = 5.0 * distance
         camera.heading = bearing
         
         mapView.setCamera(camera, animated: true)
@@ -197,4 +204,53 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         print(compassBearing)
         return compassBearing
     }
+
+    func createPath(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) {
+        let sourcePlacemark = MKPlacemark(coordinate: source)
+        let destinationPlacemark = MKPlacemark(coordinate: destination)
+        
+        let sourceMapItem = MKMapItem(placemark: sourcePlacemark)
+        let destinationMapItem = MKMapItem(placemark: destinationPlacemark)
+        
+        let directionsRequest = MKDirections.Request()
+        directionsRequest.source = sourceMapItem
+        directionsRequest.destination = destinationMapItem
+        directionsRequest.transportType = .automobile
+        
+        let directions = MKDirections(request: directionsRequest)
+        
+        directions.calculate { (response, error) in
+            guard let response = response else {
+                if let error = error {
+                    print("Error: \(error.localizedDescription)")
+                }
+                return
+            }
+            
+            let route = response.routes[0]
+            self.mapView.addOverlay(route.polyline, level: .aboveRoads)
+            
+            var regionRect = route.polyline.boundingMapRect
+            let wPadding = regionRect.size.width * 0.25
+            let hPadding = regionRect.size.height * 0.25
+            
+            regionRect.size.width += wPadding
+            regionRect.size.height += hPadding
+            
+            //self.mapView.setRegion(MKCoordinateRegion(regionRect), animated: true)
+        }
+    }
 }
+
+extension ViewController: MKMapViewDelegate {
+    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+        if overlay is MKPolyline {
+            let polylineRenderer = MKPolylineRenderer(overlay: overlay)
+            polylineRenderer.strokeColor = .blue
+            polylineRenderer.lineWidth = 6.0
+            return polylineRenderer
+        }
+        return MKOverlayRenderer(overlay: overlay)
+    }
+}
+    
