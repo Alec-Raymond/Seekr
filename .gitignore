@@ -2,7 +2,6 @@
 build/*
 *.pbxuser
 *.mode1v3
-*.xcuserdatad
 
 # old skool
 .svn
@@ -10,3 +9,8 @@ build/*
 # osx noise
 .DS_Store
 profile
+
+# zander random files
+Seekr.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+Seekr.xcodeproj/project.xcworkspace/xcuserdata/zdumont.xcuserdatad/
+Seekr.xcodeproj/xcuserdata/zdumont.xcuserdatad/
