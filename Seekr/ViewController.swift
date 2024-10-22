@@ -17,6 +17,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     var searchResults = [MKLocalSearchCompletion]()
     var annotationList = [MKPointAnnotation]()
     var tableView = UITableView()
+    var routeOverlay: MKPolyline?
     
     let geocoder = CLGeocoder()
     
@@ -109,7 +110,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     }
     
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-        searchResults = completer.results
+        let temp = completer.results.filter { !($0.subtitle.contains("Search Nearby")) && !($0.subtitle.contains("No Results Nearby")) && !$0.subtitle.isEmpty }
+        searchResults = temp
+        print(searchResults.last?.subtitle)
         tableView.reloadData()
     }
     
@@ -168,6 +171,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             }
             if (path) {
                 if let userLocation = self.locationManager.location?.coordinate {
+                    self.clearPath()
                     self.createPath(from: userLocation, to: coordinate)
                 }
             }
@@ -208,36 +212,48 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     func createPath(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) {
         let sourcePlacemark = MKPlacemark(coordinate: source)
         let destinationPlacemark = MKPlacemark(coordinate: destination)
-        
+
         let sourceMapItem = MKMapItem(placemark: sourcePlacemark)
         let destinationMapItem = MKMapItem(placemark: destinationPlacemark)
-        
+
         let directionsRequest = MKDirections.Request()
         directionsRequest.source = sourceMapItem
         directionsRequest.destination = destinationMapItem
         directionsRequest.transportType = .automobile
-        
+
         let directions = MKDirections(request: directionsRequest)
-        
-        directions.calculate { (response, error) in
+
+        directions.calculate { [weak self] (response, error) in
+            guard let self = self else { return }
             guard let response = response else {
                 if let error = error {
                     print("Error: \(error.localizedDescription)")
                 }
                 return
             }
-            
+
+            if let routeOverlay = self.routeOverlay {
+                self.mapView.removeOverlay(routeOverlay)
+            }
+
             let route = response.routes[0]
+            self.routeOverlay = route.polyline
             self.mapView.addOverlay(route.polyline, level: .aboveRoads)
-            
+
             var regionRect = route.polyline.boundingMapRect
             let wPadding = regionRect.size.width * 0.25
             let hPadding = regionRect.size.height * 0.25
-            
+
             regionRect.size.width += wPadding
             regionRect.size.height += hPadding
-            
-            //self.mapView.setRegion(MKCoordinateRegion(regionRect), animated: true)
+
+            // self.mapView.setRegion(MKCoordinateRegion(regionRect), animated: true)
+        }
+    }
+
+    func clearPath() {
+        if let routeOverlay = routeOverlay {
+            mapView.removeOverlay(routeOverlay)
         }
     }
 }
