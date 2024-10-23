@@ -18,7 +18,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     var annotationList = [MKPointAnnotation]()
     var tableView = UITableView()
     var routeOverlay: MKPolyline?
-    
+    var userCentered = false
     let geocoder = CLGeocoder()
     
     let locationManager = CLLocationManager()
@@ -49,7 +49,11 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         tableView.delegate = self // Set the delegate
         tableView.dataSource = self
         setupUI()
+        centerViewOnUserLocation()
     }
+//    override func viewDidAppear(_ animated: Bool) {
+//        centerViewOnUserLocation()
+//    }
     
     private func setupUI() {
         view.addSubview(mapView)
@@ -77,7 +81,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        centerViewOnUserLocation()
+
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -92,6 +96,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         default:
             locationManager.requestWhenInUseAuthorization()
         }
+        //Lisa: changed the centerview on user location
+        centerViewOnUserLocation()
     }
 
     let scale: CGFloat = 300
@@ -131,15 +137,64 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         cell.detailTextLabel?.text = searchResult.subtitle
         return cell
     }
-    
+    //Lisa: Commented out
+//    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+//        let selectedResult = searchResults[indexPath.row]
+//        print("Selected: \(selectedResult.title), \(selectedResult.subtitle)")
+//        
+//        // Handle the selected result (e.g., perform a search, update UI, etc.)
+//        convertAddressToAnnotation(name: selectedResult.title, address: selectedResult.subtitle, camera: true, path: true)
+//        //centerMapOnCoordinates(coord1: annotationList.last?.coordinate, coord2: <#T##CLLocationCoordinate2D#>)
+//    }
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        let selectedResult = searchResults[indexPath.row]
-        print("Selected: \(selectedResult.title), \(selectedResult.subtitle)")
         
-        // Handle the selected result (e.g., perform a search, update UI, etc.)
-        convertAddressToAnnotation(name: selectedResult.title, address: selectedResult.subtitle, camera: true, path: true)
-        //centerMapOnCoordinates(coord1: annotationList.last?.coordinate, coord2: <#T##CLLocationCoordinate2D#>)
+        //remove the selection after the row is tapped
+        tableView.deselectRow(at: indexPath, animated: true)
+        let selectedResult = searchResults[indexPath.row]
+        let searchRequest = MKLocalSearch.Request(completion: selectedResult)
+        let search = MKLocalSearch(request: searchRequest)
+        
+        search.start { [weak self] (response, error) in
+            guard let self = self else { return }
+            if let error = error {
+                print("Error: \(error.localizedDescription)")
+                return
+            }
+            guard let response = response, let mapItem = response.mapItems.first else {
+                print("No matching location found")
+                return
+            }
+            
+            let coordinate = mapItem.placemark.coordinate
+            let name = mapItem.name ?? selectedResult.title
+            
+            
+            
+            self.mapView.removeAnnotations(self.annotationList)
+            self.annotationList.removeAll()
+            
+
+            let annotation = MKPointAnnotation()//use mkpoint to display possible locations
+            annotation.coordinate = coordinate
+            annotation.title = name
+            self.mapView.addAnnotation(annotation)
+            self.annotationList.append(annotation)
+            
+            // center the map -> call centermap on coordinates
+            if let userLocation = self.locationManager.location?.coordinate {
+                self.centerMapOnCoordinates(coord1: userLocation, coord2: coordinate)
+                self.clearPath()
+                self.createPath(from: userLocation, to: coordinate)
+            }
+            
+            // clear search results
+            self.searchResults = []
+            self.tableView.reloadData()
+            // hide keyboard when not in uses
+            self.searchTextField.resignFirstResponder()
+        }
     }
+
     
     func convertAddressToAnnotation(name: String, address: String, camera: Bool = false, path: Bool = false) {
         geocoder.geocodeAddressString(address) { (placemarks, error) in
