@@ -16,21 +16,17 @@ import SwiftUI
 
 struct MapView: View {
     var body: some View {
-        // Text("Map here? Landing page?")
-        
-        NavigationStack {
-            Text("Map here? Landing page?")
-            NavigationLink{
-                ProfileView()
-                    //.navigationBarBackButtonHidden()
-            } label: {
-                HStack(spacing: 3){
-                    Text("Go to user profile")
-                        .fontWeight(.bold)
-                }
-            }
-        }
+        ViewControllerWrapper()
+            .edgesIgnoringSafeArea(.all)
     }
+}
+
+struct ViewControllerWrapper: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> ViewController {
+        return ViewController()
+    }
+
+    func updateUIViewController(_ uiViewController: ViewController, context: Context) {}
 }
 
 #Preview {
