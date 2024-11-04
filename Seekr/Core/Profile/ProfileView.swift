@@ -19,13 +19,17 @@ struct ProfileView: View {
         List {
             Section {
                 HStack {
-                    Text(User.TEST_USER.initials)
-                        .font(.title)
-                        .fontWeight(.semibold)
-                        .foregroundColor(Color(.white))
-                        .frame(width: 72, height: 72)
-                        .background(Color(.blue.opacity(0.7)))
-                        .clipShape(Circle())
+                    if #available(iOS 17.0, *) {
+                        Text(User.TEST_USER.initials)
+                            .font(.title)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color(.white))
+                            .frame(width: 72, height: 72)
+                            .background(Color(.blue.opacity(0.7)))
+                            .clipShape(Circle())
+                    } else {
+                        // Fallback on earlier versions
+                    }
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text(User.TEST_USER.fullname)
