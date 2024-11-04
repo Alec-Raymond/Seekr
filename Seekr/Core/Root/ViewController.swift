@@ -15,12 +15,16 @@ import CoreLocation
 class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDelegate, MKLocalSearchCompleterDelegate, UITableViewDataSource, UITableViewDelegate {
     
     var searchCompleter = MKLocalSearchCompleter()
+    let compassImageView = UIImageView(image: UIImage(named: "compass.png"))
     var searchResults = [MKLocalSearchCompletion]()
     var annotationList = [MKPointAnnotation]()
     var tableView = UITableView()
     var routeOverlay: MKPolyline?
     var userCentered = false
     let geocoder = CLGeocoder()
+    var lastLocation = CLLocation()
+    var lastHeading = CGFloat()
+    var lastBearing = CGFloat()
     
     let locationManager = CLLocationManager()
     lazy var mapView: MKMapView = {
@@ -44,6 +48,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     override func viewDidLoad() {
         super.viewDidLoad()
         locationManager.delegate = self
+        locationManager.requestWhenInUseAuthorization()
+        locationManager.startUpdatingHeading()
+        locationManager.startUpdatingLocation()
         searchCompleter.delegate = self
         mapView.delegate = self
         
@@ -56,33 +63,88 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
 //        centerViewOnUserLocation()
 //    }
     
+    private var searchTextFieldBottomConstraint: NSLayoutConstraint!
+    private var tableViewTopConstraint: NSLayoutConstraint!
+    private var tableViewHeightConstraint: NSLayoutConstraint!
+    
     private func setupUI() {
         view.addSubview(mapView)
         view.addSubview(searchTextField)
         view.addSubview(tableView)
+        view.addSubview(compassImageView)
+
         
         searchTextField.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        searchTextFieldBottomConstraint = searchTextField.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        searchTextFieldBottomConstraint.isActive = true
         searchTextField.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
         searchTextField.widthAnchor.constraint(equalToConstant: view.bounds.size.width/1.2).isActive = true
-        searchTextField.topAnchor.constraint(equalTo: view.topAnchor, constant: 600).isActive = true
         searchTextField.returnKeyType = .go
         
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.topAnchor.constraint(equalTo: searchTextField.bottomAnchor).isActive = true
+        tableViewTopConstraint = tableView.topAnchor.constraint(equalTo: view.bottomAnchor)
+        tableViewTopConstraint.isActive = true
+        tableViewHeightConstraint = tableView.heightAnchor.constraint(equalToConstant: 0.0)
+        tableViewHeightConstraint.isActive = true
         tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
         tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
         tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
-                
         tableView.dataSource = self
         
         mapView.widthAnchor.constraint(equalTo: view.widthAnchor).isActive = true
         mapView.heightAnchor.constraint(equalTo: view.heightAnchor, constant: 400).isActive = true
         mapView.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
         mapView.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
+        
+        compassImageView.translatesAutoresizingMaskIntoConstraints = false
+        compassImageView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16).isActive = true
+        compassImageView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16).isActive = true
+        compassImageView.widthAnchor.constraint(equalToConstant: 200).isActive = true
+        compassImageView.heightAnchor.constraint(equalToConstant: 200).isActive = true
+    }
+    
+    func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
+        print("Search bar clicked")
+        showSearch()
+    }
+    
+    func showSearch() {
+        // Deactivate constraints
+        
+        
+        UIView.animate(withDuration: 0.3, animations: {
+            NSLayoutConstraint.deactivate([self.searchTextFieldBottomConstraint, self.tableViewTopConstraint, self.tableViewHeightConstraint])
+            self.searchTextFieldBottomConstraint = self.searchTextField.bottomAnchor.constraint(equalTo: self.view.centerYAnchor)
+            self.tableViewTopConstraint = self.tableView.topAnchor.constraint(equalTo: self.searchTextField.bottomAnchor)
+            NSLayoutConstraint.activate([self.searchTextFieldBottomConstraint, self.tableViewTopConstraint])
+            self.view.layoutIfNeeded()
+        })
+    }
+
+    func hideSearch() {
+        UIView.animate(withDuration: 0.3, animations: {
+            NSLayoutConstraint.deactivate([self.searchTextFieldBottomConstraint, self.tableViewTopConstraint])
+            self.searchTextFieldBottomConstraint = self.searchTextField.bottomAnchor.constraint(equalTo: self.view.bottomAnchor)
+            self.tableViewTopConstraint = self.tableView.topAnchor.constraint(equalTo: self.view.bottomAnchor)
+            NSLayoutConstraint.activate([self.searchTextFieldBottomConstraint, self.tableViewTopConstraint, self.tableViewHeightConstraint])
+            self.view.layoutIfNeeded()
+        })
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-
+        guard let currentLocation = locations.last else { return }
+        lastLocation = currentLocation // store this location somewhere
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
+        self.lastHeading = CGFloat(newHeading.magneticHeading) * .pi / 180
+        UIView.animate(withDuration: 0.5) {
+            self.compassImageView.transform = CGAffineTransform(rotationAngle: self.lastBearing - self.lastHeading)
+        }
+    }
+    
+    func locationManagerShouldDisplayHeadingCalibration(_ manager: CLLocationManager) -> Bool {
+        return true
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -116,10 +178,13 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         searchCompleter.queryFragment = searchText
     }
     
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.resignFirstResponder()
+    }
+
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
         let temp = completer.results.filter { !($0.subtitle.contains("Search Nearby")) && !($0.subtitle.contains("No Results Nearby")) && !$0.subtitle.isEmpty }
         searchResults = temp
-        print(searchResults.last?.subtitle)
         tableView.reloadData()
     }
     
@@ -142,13 +207,13 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
 //    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 //        let selectedResult = searchResults[indexPath.row]
 //        print("Selected: \(selectedResult.title), \(selectedResult.subtitle)")
-//
+//        
 //        // Handle the selected result (e.g., perform a search, update UI, etc.)
 //        convertAddressToAnnotation(name: selectedResult.title, address: selectedResult.subtitle, camera: true, path: true)
 //        //centerMapOnCoordinates(coord1: annotationList.last?.coordinate, coord2: <#T##CLLocationCoordinate2D#>)
 //    }
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        
+        hideSearch()
         //remove the selection after the row is tapped
         tableView.deselectRow(at: indexPath, animated: true)
         let selectedResult = searchResults[indexPath.row]
@@ -237,8 +302,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     func centerMapOnCoordinates(coord1: CLLocationCoordinate2D, coord2: CLLocationCoordinate2D) {
         let camera = MKMapCamera()
         
-        let midLatitude = (2.4 * coord1.latitude + coord2.latitude) / 3.4
-        let midLongitude = (2.4 * coord1.longitude + coord2.longitude) / 3.4
+        let midLatitude = (coord1.latitude + coord2.latitude) / 2
+        let midLongitude = (coord1.longitude + coord2.longitude) / 2
         let center = CLLocationCoordinate2D(latitude: midLatitude, longitude: midLongitude)
         
         let location1 = CLLocation(latitude: coord1.latitude, longitude: coord1.longitude)
@@ -249,7 +314,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         print(distance)
         //center.longitude = center.longitude + (abs(distance) / 50000)
         camera.centerCoordinate = center
-        camera.centerCoordinateDistance = 5.0 * distance
+        camera.centerCoordinateDistance = 4.0 * distance
         camera.heading = bearing
         
         mapView.setCamera(camera, animated: true)
@@ -259,8 +324,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         let deltaLongitude = coordinate2.longitude - coordinate1.longitude
         let y = sin(deltaLongitude) * cos(coordinate2.latitude)
         let x = cos(coordinate1.latitude) * sin(coordinate2.latitude) - sin(coordinate1.latitude) * cos(coordinate2.latitude) * cos(deltaLongitude)
-        let initialBearing = atan2(y, x) * 180 / .pi
-        let compassBearing = (initialBearing + 360).truncatingRemainder(dividingBy: 360) // Normalize to 0-360
+        lastBearing = atan2(y, x)
+        let compassBearing = (lastBearing * 180 / .pi + 360).truncatingRemainder(dividingBy: 360) // Normalize to 0-360
         print(compassBearing)
         return compassBearing
     }
@@ -325,4 +390,4 @@ extension ViewController: MKMapViewDelegate {
         return MKOverlayRenderer(overlay: overlay)
     }
 }
-    
+

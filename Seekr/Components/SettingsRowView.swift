@@ -34,5 +34,9 @@ struct SettingsRowView: View {
 }
 
 #Preview {
-    SettingsRowView(imageName: "gear", title: "Version", tintColor: Color(.blue.opacity(0.7)))
+    if #available(iOS 17.0, *) {
+        SettingsRowView(imageName: "gear", title: "Version", tintColor: Color(.blue.opacity(0.7)))
+    } else {
+        // Fallback on earlier versions
+    }
 }
