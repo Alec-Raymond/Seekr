@@ -58,6 +58,7 @@ struct ProfileView: View {
                                     .foregroundColor(.gray)
                             }
                         }
+
                     }
                     
                     Section("General") {
