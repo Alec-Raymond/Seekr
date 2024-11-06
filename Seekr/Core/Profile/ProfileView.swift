@@ -21,61 +21,55 @@ struct ProfileView: View {
     @State private var errorMessage = ""
 
     var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                if isLoading {
-                    ProgressView("Loading...")
-                        .progressViewStyle(CircularProgressViewStyle())
-                } else if let user = userData {
-                    Text("Welcome, \(user.fullname)")
-                        .font(.title)
-                        .bold()
+        VStack(spacing: 20) {
+            if isLoading {
+                ProgressView("Loading...")
+                    .progressViewStyle(CircularProgressViewStyle())
+            } else if let user = userData {
+                Text("Welcome, \(user.fullname)")
+                    .font(.title)
+                    .bold()
 
-                    Text("Email: \(user.email)")
-                        .foregroundColor(.gray)
+                Text("Email: \(user.email)")
+                    .foregroundColor(.gray)
 
-                    Button(action: {
-                        authViewModel.signOut()
-                    }) {
-                        Text("Log Out")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.red)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                            .padding(.horizontal)
-                    }
-
-                    Spacer()
-                } else {
-                    Text("No user data available.")
-                        .foregroundColor(.gray)
+                Button(action: {
+                    authViewModel.signOut()
+                }) {
+                    Text("Log Out")
+                        .frame(maxWidth: .infinity)
                         .padding()
-                }
-
-                if !errorMessage.isEmpty {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
+                        .background(Color.red)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
                         .padding(.horizontal)
                 }
+
+                Spacer()
+            } else {
+                Text("No user data available.")
+                    .foregroundColor(.gray)
+                    .padding()
             }
-            .padding()
-            .navigationTitle("Profile")
-            .onAppear {
-                loadUserData()
+
+            if !errorMessage.isEmpty {
+                Text(errorMessage)
+                    .foregroundColor(.red)
+                    .padding(.horizontal)
             }
+        }
+        .padding()
+        .navigationTitle("Profile")
+        .onAppear {
+            loadUserData()
         }
     }
 
     private func loadUserData() {
         Task {
             isLoading = true
-            do {
-                try await authViewModel.fetchUser()
-                userData = authViewModel.currentUser
-            } catch {
-                errorMessage = error.localizedDescription
-            }
+            await authViewModel.fetchUser()
+            userData = authViewModel.currentUser
             isLoading = false
         }
     }
