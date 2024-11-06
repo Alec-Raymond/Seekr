@@ -25,6 +25,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     var lastLocation = CLLocation()
     var lastHeading = CGFloat()
     var lastBearing = CGFloat()
+    var destinationLocation = CLLocation()
+    var destinationDistance = CLLocationDistance()
     
     let locationManager = CLLocationManager()
     lazy var mapView: MKMapView = {
@@ -34,6 +36,35 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         return map
     }()
     
+    // Go Button
+    let button: UIButton = {
+        let button = UIButton()
+        button.setTitle("GO", for: .normal)
+        button.backgroundColor = .blue
+        button.layer.cornerRadius = 15
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.isHidden = true
+        button.addTarget(self, action: #selector(buttonPressed), for: .touchUpInside)
+        // ^ Don't listen to the warning
+        return button
+    }()
+    
+    // Progress Bar
+    let progressView: UIProgressView = {
+        let progressView = UIProgressView()
+        progressView.backgroundColor = UIColor.lightGray.withAlphaComponent(0.3)
+        progressView.progressTintColor = .blue
+        progressView.progressViewStyle = .bar
+        progressView.progress = 0.0
+        progressView.layer.cornerRadius = 5
+        progressView.clipsToBounds = true
+        progressView.layer.sublayers?.forEach { $0.cornerRadius = 5 }
+        progressView.subviews.forEach { $0.clipsToBounds = true }
+        progressView.translatesAutoresizingMaskIntoConstraints = false
+        progressView.isHidden = true
+        return progressView
+    }()
+
     lazy var searchTextField: UISearchBar = {
         let searchTextField = UISearchBar()
         searchTextField.layer.cornerRadius = 15
@@ -72,7 +103,24 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         view.addSubview(searchTextField)
         view.addSubview(tableView)
         view.addSubview(compassImageView)
-
+        view.addSubview(button)
+        view.addSubview(progressView)
+        
+        // Center Go Button
+        NSLayoutConstraint.activate([
+            button.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            button.topAnchor.constraint(equalTo: view.topAnchor, constant: 75),
+            button.widthAnchor.constraint(equalToConstant: 150),
+            button.heightAnchor.constraint(equalToConstant: 40)
+        ])
+        
+        // Center Progress Bar
+        NSLayoutConstraint.activate([
+            progressView.widthAnchor.constraint(equalToConstant: 300),
+            progressView.heightAnchor.constraint(equalToConstant: 10),
+            progressView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            progressView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20)
+        ])
         
         searchTextField.heightAnchor.constraint(equalToConstant: 44).isActive = true
         searchTextFieldBottomConstraint = searchTextField.bottomAnchor.constraint(equalTo: view.bottomAnchor)
@@ -97,15 +145,44 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         mapView.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
         
         compassImageView.translatesAutoresizingMaskIntoConstraints = false
-        compassImageView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16).isActive = true
+        compassImageView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 30).isActive = true
         compassImageView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16).isActive = true
         compassImageView.widthAnchor.constraint(equalToConstant: 200).isActive = true
         compassImageView.heightAnchor.constraint(equalToConstant: 200).isActive = true
     }
     
     func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
-        print("Search bar clicked")
         showSearch()
+    }
+    
+    func showGoButton() {
+        button.isHidden = false
+    }
+    
+    func hideGoButton() {
+        button.isHidden = true
+    }
+    
+    func showPBar() {
+        progressView.isHidden = false
+    }
+    
+    func hidePBar() {
+        progressView.isHidden = true
+    }
+    
+    @objc func buttonPressed() {
+        hideGoButton()
+        centerViewOnUserLocation()
+        showPBar()
+    }
+    
+    func updateProgressBar(distanceRemaining: CLLocationDistance) {
+        let p = Float(destinationDistance - distanceRemaining) / Float(destinationDistance)
+        print(p)
+        if (p > 0) {
+            progressView.progress = p
+        }
     }
     
     func showSearch() {
@@ -134,6 +211,10 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let currentLocation = locations.last else { return }
         lastLocation = currentLocation // store this location somewhere
+
+        let distanceRemaining = currentLocation.distance(from: destinationLocation)
+        // need to give distanceRemaining to progress bar
+        updateProgressBar(distanceRemaining: distanceRemaining)
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
@@ -300,6 +381,10 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     }
     
     func centerMapOnCoordinates(coord1: CLLocationCoordinate2D, coord2: CLLocationCoordinate2D) {
+        
+        hidePBar()
+        hideGoButton()
+        
         let camera = MKMapCamera()
         
         let midLatitude = (coord1.latitude + coord2.latitude) / 2
@@ -310,14 +395,17 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         let location2 = CLLocation(latitude: coord2.latitude, longitude: coord2.longitude)
         let distance = location1.distance(from: location2)
         let bearing = calculateBearing(from: coord1, to: coord2)
-        
-        print(distance)
+        destinationLocation = CLLocation(latitude: coord2.latitude, longitude: coord2.longitude)
+        destinationDistance = distance
         //center.longitude = center.longitude + (abs(distance) / 50000)
         camera.centerCoordinate = center
         camera.centerCoordinateDistance = 4.0 * distance
         camera.heading = bearing
         
         mapView.setCamera(camera, animated: true)
+        
+        // need to make go button pop uo after this
+        showGoButton()
     }
     
     func calculateBearing(from coordinate1: CLLocationCoordinate2D, to coordinate2: CLLocationCoordinate2D) -> CLLocationDirection {
