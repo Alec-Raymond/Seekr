@@ -12,23 +12,35 @@
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject var viewModel: AuthViewModel
+    @EnvironmentObject var authViewModel: AuthViewModel
 
     var body: some View {
         Group {
-            if viewModel.userSession != nil {
-                MapView()
-                //ProfileView()
+            if authViewModel.userSession != nil {
+                //MapView()
+                ProfileView()
             } else {
-                LoginView()
+                AuthenticationView()
+            }
+        }
+        .onAppear {
+            Task {
+                await authViewModel.fetchUser()
             }
         }
     }
 }
 
-#Preview {
-    ContentView()
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+            .environmentObject(AuthViewModel())
+    }
 }
+
+//#Preview {
+//    ContentView()
+//}
 
 
 

@@ -13,73 +13,153 @@
 import SwiftUI
 
 struct RegistrationView: View {
-    @State private var email: String = ""
-    @State private var fullname: String = ""
-    @State private var password: String = ""
-    @State private var confirmPassword: String = ""
-    @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var viewModel: AuthViewModel
-    
+    @State private var fullname = ""
+    @State private var email = ""
+    @State private var password = ""
+    @State private var errorMessage = ""
+
+    @Binding var isRegistering: Bool
+    @EnvironmentObject var authViewModel: AuthViewModel
+
     var body: some View {
-        VStack {
-            // Image
-            Image("Logo")
-                .padding() //.padding(.vertical, 32)
-            
-            VStack(spacing: 24){
-                InputView(text: $email,
-                          title: "Email Address",
-                          placeholder: "Enter your email")
-                //.autocapitalization(.none)
-                
-                InputView(text: $fullname,
-                          title: "Name",
-                          placeholder: "Enter your full name")
-                
-                InputView(text: $password,
-                          title: "Password",
-                          placeholder: "Enter your password",
-                          isSecureField: true)
-                
-                InputView(text: $confirmPassword,
-                          title: "Confirm Password",
-                          placeholder: "Confirm your password",
-                          isSecureField: true)
+        VStack(spacing: 20) {
+            Text("Seekr Registration")
+                .font(.largeTitle)
+                .bold()
+
+            TextField("Full Name", text: $fullname)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding(.horizontal)
+
+            TextField("Email", text: $email)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .autocapitalization(.none)
+                .keyboardType(.emailAddress)
+                .padding(.horizontal)
+
+            SecureField("Password", text: $password)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding(.horizontal)
+
+            if !errorMessage.isEmpty {
+                Text(errorMessage)
+                    .foregroundColor(.red)
+                    .padding(.horizontal)
             }
-            .padding(.horizontal)
-            .padding(.top, 12)
-            
-            Button{
+
+            Button(action: {
                 Task {
-                    try await viewModel.createUser(withEmail: email, password: password, fullname: fullname)
+                    do {
+                        try await authViewModel.createUser(withEmail: email, password: password, fullname: fullname)
+                        // Navigation handled by ContentView
+                    } catch {
+                        errorMessage = error.localizedDescription
+                    }
                 }
-            } label: {
-                HStack{
-                    Text("Sign up")
-                        .fontWeight(.semibold)
-                }
-                .foregroundColor(.white)
-                .frame(width: UIScreen.main.bounds.width - 32, height: 48) // flag
+            }) {
+                Text("Register")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                    .padding(.horizontal)
             }
-            .background(Color(.blue))
-            .cornerRadius(10)
-            .padding()
-            
+
+            Button(action: {
+                isRegistering.toggle()
+                errorMessage = ""
+            }) {
+                Text("Already have an account? Log in")
+                    .foregroundColor(.blue)
+            }
+            .padding(.top)
+
             Spacer()
-            
-            Button {
-                dismiss()
-            } label: {
-                HStack(spacing: 3){
-                    Text("Already have an account?")
-                    Text("Sign in")
-                        .fontWeight(.bold)
-                }
-            }
         }
+        .padding(.top, 50)
     }
 }
 
-#Preview {
-    RegistrationView()
+struct RegistrationView_Previews: PreviewProvider {
+    static var previews: some View {
+        RegistrationView(isRegistering: .constant(true))
+            .environmentObject(AuthViewModel())
+    }
 }
+
+
+
+//import SwiftUI
+//
+//struct RegistrationView: View {
+//    @State private var email: String = ""
+//    @State private var fullname: String = ""
+//    @State private var password: String = ""
+//    @State private var confirmPassword: String = ""
+//    @Environment(\.dismiss) var dismiss
+//    @EnvironmentObject var viewModel: AuthViewModel
+//    
+//    var body: some View {
+//        VStack {
+//            // Image
+//            Image("Logo")
+//                .padding() //.padding(.vertical, 32)
+//            
+//            VStack(spacing: 24){
+//                InputView(text: $email,
+//                          title: "Email Address",
+//                          placeholder: "Enter your email")
+//                //.autocapitalization(.none)
+//                
+//                InputView(text: $fullname,
+//                          title: "Name",
+//                          placeholder: "Enter your full name")
+//                
+//                InputView(text: $password,
+//                          title: "Password",
+//                          placeholder: "Enter your password",
+//                          isSecureField: true)
+//                
+//                InputView(text: $confirmPassword,
+//                          title: "Confirm Password",
+//                          placeholder: "Confirm your password",
+//                          isSecureField: true)
+//            }
+//            .padding(.horizontal)
+//            .padding(.top, 12)
+//            
+//            Button{
+//                Task {
+//                    try await viewModel.createUser(withEmail: email, password: password, fullname: fullname)
+//                }
+//            } label: {
+//                HStack{
+//                    Text("Sign up")
+//                        .fontWeight(.semibold)
+//                }
+//                .foregroundColor(.white)
+//                .frame(width: UIScreen.main.bounds.width - 32, height: 48) // flag
+//            }
+//            .background(Color(.blue))
+//            .cornerRadius(10)
+//            .padding()
+//            
+//            Spacer()
+//            
+//            Button {
+//                dismiss()
+//            } label: {
+//                HStack(spacing: 3){
+//                    Text("Already have an account?")
+//                    Text("Sign in")
+//                        .fontWeight(.bold)
+//                }
+//            }
+//        }
+//    }
+//}
+//
+//#Preview {
+//    RegistrationView()
+//}
