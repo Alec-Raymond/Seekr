@@ -98,3 +98,11 @@ struct RegistrationView: View {
         .padding(.top, 50)
     }
 }
+
+struct RegistrationView_Previews: PreviewProvider {
+    static var previews: some View {
+        RegistrationView(isRegistering: .constant(true))
+            .environmentObject(AuthViewModel())
+    }
+}
+

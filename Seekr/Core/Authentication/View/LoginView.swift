@@ -89,7 +89,11 @@ struct LoginView: View {
                     }
                 }
             }
+            .padding(.top)
+
+            Spacer()
         }
+        .padding(.top, 50)
     }
 }
 

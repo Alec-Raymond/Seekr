@@ -15,7 +15,6 @@
 //  Ryan Trimble: I finished designing the remainder of the functions below as well as updated the name of the exported struct to AppUser as it had conflicts with prior named variables. The routes added were updates to create user as well as new functions for sign in, fetch data, log out, and delete account
 
 
-
 import Foundation
 import Firebase
 import FirebaseAuth
@@ -27,7 +26,6 @@ struct AppUser: Identifiable, Codable {
     @DocumentID var id: String? // Firestore document ID
     var fullname: String
     var email: String
-    
 }
 
 @MainActor
@@ -46,6 +44,7 @@ class AuthViewModel: ObservableObject {
     }
     
     // Sign In Function. Checks passed email and password with database and if a match is found, the user is logged in and recorded in their session.
+    
     func signIn(withEmail email: String, password: String) async throws {
         do {
             print("Attempting to sign in user...")
@@ -59,6 +58,7 @@ class AuthViewModel: ObservableObject {
         }
     }
     
+
     // Create User Function to register new accounts. Via firebase, it ensures that the email is avalible and then creates the user in the database/logs them in
     func createUser(withEmail email: String, password: String, fullname: String) async throws {
         do {
@@ -92,7 +92,7 @@ class AuthViewModel: ObservableObject {
             print("DEBUG: Error signing out: \(signOutError.localizedDescription)")
         }
     }
-    
+
     // Fetch User Data Function. This function is used to grab all of the data from a user entry in the database for populating pages that are served to the user such as profiles.
     func fetchUser() async {
         guard let uid = auth.currentUser?.uid else { return }
