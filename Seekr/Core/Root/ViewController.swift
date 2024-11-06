@@ -183,6 +183,12 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         if (p > 0) {
             progressView.progress = p
         }
+        else if (p > 1 && distanceRemaining > 0) {
+            progressView.progress = 0.0
+        }
+        else if (p >= 1 && distanceRemaining < 0) {
+            progressView.progress = 1.0
+        }
     }
     
     func showSearch() {
