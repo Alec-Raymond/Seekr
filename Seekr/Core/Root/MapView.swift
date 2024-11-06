@@ -15,26 +15,9 @@
 import SwiftUI
 
 struct MapView: View {
-    // need to get the size in miles from the map
-    // and calulate the percentage that the user is away
-    // from the destination based on how much they
-    // have moved
-    
-    @State private var progress_percentage = 0.2
-    @State private var size = 10.0
-    
     var body: some View {
         ViewControllerWrapper()
             .edgesIgnoringSafeArea(.all)
-            .overlay {
-                VStack {
-                    ProgressView(value: progress_percentage)
-                        .background(.gray)
-                        .tint(.init(red: 0, green: 0, blue: 255))
-                        .frame(width: 300, height: 50)
-                    Spacer()
-                }
-            }
     }
 }
 
