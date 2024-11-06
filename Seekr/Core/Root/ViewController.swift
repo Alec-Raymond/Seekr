@@ -179,7 +179,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     func updateProgressBar(distanceRemaining: CLLocationDistance) {
         let p = Float(destinationDistance - distanceRemaining) / Float(destinationDistance)
-        print(p)
+        // print("progress: ", p)
         if (p > 0) {
             progressView.progress = p
         }
@@ -219,6 +219,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         lastLocation = currentLocation // store this location somewhere
 
         let distanceRemaining = currentLocation.distance(from: destinationLocation)
+        // print("distance remaining: ", distanceRemaining)
         // need to give distanceRemaining to progress bar
         updateProgressBar(distanceRemaining: distanceRemaining)
     }
@@ -420,7 +421,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         let x = cos(coordinate1.latitude) * sin(coordinate2.latitude) - sin(coordinate1.latitude) * cos(coordinate2.latitude) * cos(deltaLongitude)
         lastBearing = atan2(y, x)
         let compassBearing = (lastBearing * 180 / .pi + 360).truncatingRemainder(dividingBy: 360) // Normalize to 0-360
-        print(compassBearing)
+        // print(compassBearing)
         return compassBearing
     }
 
