@@ -16,16 +16,21 @@ struct RegistrationView: View {
     @State private var fullname = ""
     @State private var email = ""
     @State private var password = ""
+    @State private var confirmPassword = ""
     @State private var errorMessage = ""
 
     @Binding var isRegistering: Bool
-    @EnvironmentObject var authViewModel: AuthViewModel
+        @EnvironmentObject var authViewModel: AuthViewModel
+        
+    // Add password validation
+    private var passwordsMatch: Bool {
+        password == confirmPassword
+    }
 
     var body: some View {
         VStack(spacing: 20) {
-            Text("Seekr Registration")
-                .font(.largeTitle)
-                .bold()
+            Image("Logo")
+                .padding() //.padding(.vertical, 32)
 
             TextField("Full Name", text: $fullname)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -40,6 +45,17 @@ struct RegistrationView: View {
             SecureField("Password", text: $password)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding(.horizontal)
+            
+            SecureField("Confirm Password", text: $confirmPassword)  // Added confirm password field
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding(.horizontal)
+                        
+            if !passwordsMatch && !confirmPassword.isEmpty {  // Show mismatch warning
+                Text("Passwords do not match")
+                    .foregroundColor(.red)
+                    .font(.caption)
+                    .padding(.horizontal)
+            }
 
             if !errorMessage.isEmpty {
                 Text(errorMessage)
@@ -60,7 +76,7 @@ struct RegistrationView: View {
                 Text("Register")
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.green)
+                    .background(Color.blue)
                     .foregroundColor(.white)
                     .cornerRadius(8)
                     .padding(.horizontal)
@@ -78,13 +94,6 @@ struct RegistrationView: View {
             Spacer()
         }
         .padding(.top, 50)
-    }
-}
-
-struct RegistrationView_Previews: PreviewProvider {
-    static var previews: some View {
-        RegistrationView(isRegistering: .constant(true))
-            .environmentObject(AuthViewModel())
     }
 }
 

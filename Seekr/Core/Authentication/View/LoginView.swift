@@ -22,58 +22,73 @@ struct LoginView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Seekr Login")
-                .font(.largeTitle)
-                .bold()
+        NavigationStack {
+            ZStack {
+                // Background color
+                Color.blue
+                    .ignoresSafeArea()
+                                
+                // Decorative circles
+                Circle()
+                    .scale(1.8)
+                    .foregroundColor(.white.opacity(0.15))
+                Circle()
+                    .scale(1.45)
+                    .foregroundColor(.white.opacity(0.15))
+                Circle()
+                    .scale(1.25)
+                    .foregroundColor(.white)
+                
+                VStack(spacing: 20) {
+                    // Logo image
+                    Image("Logo")
+                        .padding() //.padding(.vertical, 32)
 
-            TextField("Email", text: $email)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .autocapitalization(.none)
-                .keyboardType(.emailAddress)
-                .padding(.horizontal)
+                    TextField("Email", text: $email)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .autocapitalization(.none)
+                        .keyboardType(.emailAddress)
+                        .padding(.horizontal)
 
-            SecureField("Password", text: $password)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding(.horizontal)
+                    SecureField("Password", text: $password)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(.horizontal)
 
-            if !errorMessage.isEmpty {
-                Text(errorMessage)
-                    .foregroundColor(.red)
-                    .padding(.horizontal)
-            }
+                    if !errorMessage.isEmpty {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                            .padding(.horizontal)
+                    }
 
-            Button(action: {
-                Task {
-                    do {
-                        try await authViewModel.signIn(withEmail: email, password: password)
-                        // Navigation handled by ContentView
-                    } catch {
-                        errorMessage = error.localizedDescription
+                    Button(action: {
+                        Task {
+                            do {
+                                try await authViewModel.signIn(withEmail: email, password: password)
+                                // Navigation handled by ContentView
+                            } catch {
+                                errorMessage = error.localizedDescription
+                            }
+                        }
+                    }) {
+                        Text("Login")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                            .padding(.horizontal)
+                    }
+
+                    Button(action: {
+                        isRegistering.toggle()
+                        errorMessage = ""
+                    }) {
+                        Text("Don't have an account? Register")
+                            .foregroundColor(.blue)
                     }
                 }
-            }) {
-                Text("Login")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                    .padding(.horizontal)
             }
-
-            Button(action: {
-                isRegistering.toggle()
-                errorMessage = ""
-            }) {
-                Text("Don't have an account? Register")
-                    .foregroundColor(.blue)
-            }
-            .padding(.top)
-
-            Spacer()
         }
-        .padding(.top, 50)
     }
 }
 
@@ -83,7 +98,6 @@ struct LoginView_Previews: PreviewProvider {
             .environmentObject(AuthViewModel())
     }
 }
-
 
 //import SwiftUI
 //
