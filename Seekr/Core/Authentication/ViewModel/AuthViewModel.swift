@@ -25,6 +25,7 @@ struct AppUser: Identifiable, Codable {
     @DocumentID var id: String? // Firestore document ID
     var fullname: String
     var email: String
+    
 }
 
 @MainActor

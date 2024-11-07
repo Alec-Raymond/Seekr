@@ -17,7 +17,7 @@ struct ContentView: View {
     var body: some View {
         Group {
             if authViewModel.userSession != nil {
-                //MapView()
+                MapView()
                 HomeView()
             } else {
                 AuthenticationView()
