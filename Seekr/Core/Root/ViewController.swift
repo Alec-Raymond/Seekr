@@ -36,7 +36,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         return map
     }()
     
-    // Go Button
+    // Zander added: Go Button
     let button: UIButton = {
         let button = UIButton()
         button.setTitle("GO", for: .normal)
@@ -49,7 +49,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         return button
     }()
     
-    // Progress Bar
+    // Zander added: Progress Bar
     let progressView: UIProgressView = {
         let progressView = UIProgressView()
         progressView.backgroundColor = UIColor.lightGray.withAlphaComponent(0.3)
@@ -106,7 +106,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         view.addSubview(button)
         view.addSubview(progressView)
         
-        // Center Go Button
+        // Zander added: Center Go Button
         NSLayoutConstraint.activate([
             button.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             button.topAnchor.constraint(equalTo: view.topAnchor, constant: 75),
@@ -114,7 +114,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             button.heightAnchor.constraint(equalToConstant: 40)
         ])
         
-        // Center Progress Bar
+        // Zander added: Center Progress Bar
         NSLayoutConstraint.activate([
             progressView.widthAnchor.constraint(equalToConstant: 300),
             progressView.heightAnchor.constraint(equalToConstant: 10),
@@ -155,28 +155,42 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         showSearch()
     }
     
+    // Zander added: show Go Button
     func showGoButton() {
         button.isHidden = false
     }
     
+    // Zander added: hide Go Button
     func hideGoButton() {
         button.isHidden = true
     }
     
+    // Zander added: show Progress Bar
     func showPBar() {
         progressView.isHidden = false
     }
     
+    // Zander added: hide Progress Bar
     func hidePBar() {
         progressView.isHidden = true
     }
     
+    // Zander added: go Button pressed
     @objc func buttonPressed() {
+        // after button is pressed hide button
         hideGoButton()
+        // center view -- we may want to change the way the
+        // view is centered such that the path is always
+        // facing the top of the screen
         centerViewOnUserLocation()
+        // show progress bar
         showPBar()
     }
     
+    // Zander added: function that updates the progress
+    // bar by taking the distance remaining and using
+    // the destination distance to calculate
+    // progress as a percentage
     func updateProgressBar(distanceRemaining: CLLocationDistance) {
         let p = Float(destinationDistance - distanceRemaining) / Float(destinationDistance)
         // print("progress: ", p)
@@ -193,7 +207,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     func showSearch() {
         // Deactivate constraints
-        
         
         UIView.animate(withDuration: 0.3, animations: {
             NSLayoutConstraint.deactivate([self.searchTextFieldBottomConstraint, self.tableViewTopConstraint, self.tableViewHeightConstraint])
@@ -389,6 +402,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     func centerMapOnCoordinates(coord1: CLLocationCoordinate2D, coord2: CLLocationCoordinate2D) {
         
+        // Zander added: hide the Progress Bar and Go
+        // Button
         hidePBar()
         hideGoButton()
         
@@ -411,7 +426,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         
         mapView.setCamera(camera, animated: true)
         
-        // need to make go button pop uo after this
+        // Zander added: show Go button after map path is
+        // centered
         showGoButton()
     }
     
