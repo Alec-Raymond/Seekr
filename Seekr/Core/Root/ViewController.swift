@@ -27,6 +27,10 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     var lastBearing = CGFloat()
     var destinationLocation = CLLocation()
     var destinationDistance = CLLocationDistance()
+    // Zander added: haveDestination to keep track if the
+    // user is currently navigating or has not yet started
+    // their route
+    var haveDestination = false
     
     let locationManager = CLLocationManager()
     lazy var mapView: MKMapView = {
@@ -177,6 +181,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     // Zander added: go Button pressed
     @objc func buttonPressed() {
+        // go button is pressed so we are now navigating
+        // and have a destination
+        haveDestination = true
         // after button is pressed hide button
         hideGoButton()
         // center view -- we may want to change the way the
@@ -193,7 +200,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     // progress as a percentage
     func updateProgressBar(distanceRemaining: CLLocationDistance) {
         let p = Float(destinationDistance - distanceRemaining) / Float(destinationDistance)
-        // print("progress: ", p)
         if (p > 0) {
             progressView.progress = p
         }
@@ -229,13 +235,28 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let currentLocation = locations.last else { return }
-        lastLocation = currentLocation // store this location somewhere
+        lastLocation = currentLocation
 
-        let distanceRemaining = currentLocation.distance(from: destinationLocation)
-        // print("distance remaining: ", distanceRemaining)
-        // need to give distanceRemaining to progress bar
-        updateProgressBar(distanceRemaining: distanceRemaining)
+        // Zander added: calculate distance remaining if
+        // we have a destination
+        if haveDestination {
+            let distanceRemaining = currentLocation.distance(from: destinationLocation)
+            if distanceRemaining < 50 { // need to fine tune
+                haveDestination = false
+                hidePBar()
+                // we have arrived, do something here
+                print("you have arrived")
+                
+            } else {
+                // Zander added: update the progress bar with the
+                // current distance remaining
+                updateProgressBar(distanceRemaining: distanceRemaining)
+            }
+        }
     }
+    
+    // Why do we have two location manager functions
+    // with the same name?
     
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
         self.lastHeading = CGFloat(newHeading.magneticHeading) * .pi / 180
@@ -304,6 +325,11 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         cell.detailTextLabel?.text = searchResult.subtitle
         return cell
     }
+    
+    // Zander: if we don't need this section can we delete
+    // it rather than having a huge comment in the middle
+    // of our code?
+    
     //Lisa: Commented out
 //    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 //        let selectedResult = searchResults[indexPath.row]
