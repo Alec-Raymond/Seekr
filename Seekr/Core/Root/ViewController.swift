@@ -27,16 +27,21 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     var lastBearing = CGFloat()
     var destinationLocation = CLLocation()
     var destinationDistance = CLLocationDistance()
+    // Zander added: haveDestination to keep track if the
+    // user is currently navigating or has not yet started
+    // their route
+    var haveDestination = false
+    // Zander: moved scale here
+    let scale: CGFloat = 300
     
     let locationManager = CLLocationManager()
     lazy var mapView: MKMapView = {
         let map = MKMapView()
-        // map.showsUserLocation = true
         map.translatesAutoresizingMaskIntoConstraints = false
         return map
     }()
     
-    // Go Button
+    // Zander added: Go Button
     let button: UIButton = {
         let button = UIButton()
         button.setTitle("GO", for: .normal)
@@ -49,7 +54,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         return button
     }()
     
-    // Progress Bar
+    // Zander added: Progress Bar
     let progressView: UIProgressView = {
         let progressView = UIProgressView()
         progressView.backgroundColor = UIColor.lightGray.withAlphaComponent(0.3)
@@ -106,16 +111,12 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         view.addSubview(button)
         view.addSubview(progressView)
         
-        // Center Go Button
+        // Zander added: Center Go Button and Progress Bar
         NSLayoutConstraint.activate([
             button.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             button.topAnchor.constraint(equalTo: view.topAnchor, constant: 75),
             button.widthAnchor.constraint(equalToConstant: 150),
-            button.heightAnchor.constraint(equalToConstant: 40)
-        ])
-        
-        // Center Progress Bar
-        NSLayoutConstraint.activate([
+            button.heightAnchor.constraint(equalToConstant: 40),
             progressView.widthAnchor.constraint(equalToConstant: 300),
             progressView.heightAnchor.constraint(equalToConstant: 10),
             progressView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -155,31 +156,47 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         showSearch()
     }
     
+    // Zander added: show Go Button
     func showGoButton() {
         button.isHidden = false
     }
     
+    // Zander added: hide Go Button
     func hideGoButton() {
         button.isHidden = true
     }
     
+    // Zander added: show Progress Bar
     func showPBar() {
         progressView.isHidden = false
     }
     
+    // Zander added: hide Progress Bar
     func hidePBar() {
         progressView.isHidden = true
     }
     
+    // Zander added: go Button pressed
     @objc func buttonPressed() {
+        // go button is pressed so we are now navigating
+        // and have a destination
+        haveDestination = true
+        // after button is pressed hide button
         hideGoButton()
+        // center view -- we may want to change the way the
+        // view is centered such that the path is always
+        // facing the top of the screen
         centerViewOnUserLocation()
+        // show progress bar
         showPBar()
     }
     
+    // Zander added: function that updates the progress
+    // bar by taking the distance remaining and using
+    // the destination distance to calculate
+    // progress as a percentage
     func updateProgressBar(distanceRemaining: CLLocationDistance) {
         let p = Float(destinationDistance - distanceRemaining) / Float(destinationDistance)
-        // print("progress: ", p)
         if (p > 0) {
             progressView.progress = p
         }
@@ -193,7 +210,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     func showSearch() {
         // Deactivate constraints
-        
         
         UIView.animate(withDuration: 0.3, animations: {
             NSLayoutConstraint.deactivate([self.searchTextFieldBottomConstraint, self.tableViewTopConstraint, self.tableViewHeightConstraint])
@@ -216,12 +232,25 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let currentLocation = locations.last else { return }
-        lastLocation = currentLocation // store this location somewhere
+        lastLocation = currentLocation
 
-        let distanceRemaining = currentLocation.distance(from: destinationLocation)
-        // print("distance remaining: ", distanceRemaining)
-        // need to give distanceRemaining to progress bar
-        updateProgressBar(distanceRemaining: distanceRemaining)
+        // Zander added: calculate distance remaining if
+        // we have a destination
+        if haveDestination {
+            let distanceRemaining = currentLocation.distance(from: destinationLocation)
+            if distanceRemaining < 50 { // need to fine tune
+                haveDestination = false
+                hidePBar()
+                // we have arrived, do something here
+                // perhaps lisa can add a notification
+                print("you have arrived")
+                
+            } else {
+                // Zander added: update the progress bar with the
+                // current distance remaining
+                updateProgressBar(distanceRemaining: distanceRemaining)
+            }
+        }
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
@@ -250,8 +279,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         //Lisa: changed the centerview on user location
         centerViewOnUserLocation()
     }
-
-    let scale: CGFloat = 300
 
     private func centerViewOnUserLocation() {
         if let coordinate = locationManager.location?.coordinate {
@@ -291,15 +318,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         cell.detailTextLabel?.text = searchResult.subtitle
         return cell
     }
-    //Lisa: Commented out
-//    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-//        let selectedResult = searchResults[indexPath.row]
-//        print("Selected: \(selectedResult.title), \(selectedResult.subtitle)")
-//        
-//        // Handle the selected result (e.g., perform a search, update UI, etc.)
-//        convertAddressToAnnotation(name: selectedResult.title, address: selectedResult.subtitle, camera: true, path: true)
-//        //centerMapOnCoordinates(coord1: annotationList.last?.coordinate, coord2: <#T##CLLocationCoordinate2D#>)
-//    }
+    
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         hideSearch()
         //remove the selection after the row is tapped
@@ -389,6 +408,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     func centerMapOnCoordinates(coord1: CLLocationCoordinate2D, coord2: CLLocationCoordinate2D) {
         
+        // Zander added: hide the Progress Bar and Go
+        // Button
         hidePBar()
         hideGoButton()
         
@@ -411,7 +432,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         
         mapView.setCamera(camera, animated: true)
         
-        // need to make go button pop uo after this
+        // Zander added: show Go button after map path is
+        // centered
         showGoButton()
     }
     
@@ -462,8 +484,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
 
             regionRect.size.width += wPadding
             regionRect.size.height += hPadding
-
-            // self.mapView.setRegion(MKCoordinateRegion(regionRect), animated: true)
         }
     }
 
