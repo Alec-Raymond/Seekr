@@ -31,11 +31,12 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     // user is currently navigating or has not yet started
     // their route
     var haveDestination = false
+    // Zander: moved scale here
+    let scale: CGFloat = 300
     
     let locationManager = CLLocationManager()
     lazy var mapView: MKMapView = {
         let map = MKMapView()
-        // map.showsUserLocation = true
         map.translatesAutoresizingMaskIntoConstraints = false
         return map
     }()
@@ -110,16 +111,12 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         view.addSubview(button)
         view.addSubview(progressView)
         
-        // Zander added: Center Go Button
+        // Zander added: Center Go Button and Progress Bar
         NSLayoutConstraint.activate([
             button.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             button.topAnchor.constraint(equalTo: view.topAnchor, constant: 75),
             button.widthAnchor.constraint(equalToConstant: 150),
-            button.heightAnchor.constraint(equalToConstant: 40)
-        ])
-        
-        // Zander added: Center Progress Bar
-        NSLayoutConstraint.activate([
+            button.heightAnchor.constraint(equalToConstant: 40),
             progressView.widthAnchor.constraint(equalToConstant: 300),
             progressView.heightAnchor.constraint(equalToConstant: 10),
             progressView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -245,6 +242,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
                 haveDestination = false
                 hidePBar()
                 // we have arrived, do something here
+                // perhaps lisa can add a notification
                 print("you have arrived")
                 
             } else {
@@ -254,9 +252,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             }
         }
     }
-    
-    // Why do we have two location manager functions
-    // with the same name?
     
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
         self.lastHeading = CGFloat(newHeading.magneticHeading) * .pi / 180
@@ -284,8 +279,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         //Lisa: changed the centerview on user location
         centerViewOnUserLocation()
     }
-
-    let scale: CGFloat = 300
 
     private func centerViewOnUserLocation() {
         if let coordinate = locationManager.location?.coordinate {
@@ -326,19 +319,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         return cell
     }
     
-    // Zander: if we don't need this section can we delete
-    // it rather than having a huge comment in the middle
-    // of our code?
-    
-    //Lisa: Commented out
-//    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-//        let selectedResult = searchResults[indexPath.row]
-//        print("Selected: \(selectedResult.title), \(selectedResult.subtitle)")
-//        
-//        // Handle the selected result (e.g., perform a search, update UI, etc.)
-//        convertAddressToAnnotation(name: selectedResult.title, address: selectedResult.subtitle, camera: true, path: true)
-//        //centerMapOnCoordinates(coord1: annotationList.last?.coordinate, coord2: <#T##CLLocationCoordinate2D#>)
-//    }
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         hideSearch()
         //remove the selection after the row is tapped
@@ -504,8 +484,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
 
             regionRect.size.width += wPadding
             regionRect.size.height += hPadding
-
-            // self.mapView.setRegion(MKCoordinateRegion(regionRect), animated: true)
         }
     }
 
