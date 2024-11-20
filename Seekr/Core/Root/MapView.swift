@@ -18,7 +18,7 @@ import UIKit
 // MARK: - Custom ViewController
 class MapViewController: UIViewController, MKMapViewDelegate {
     private var mapView: MKMapView!
-    private var pins: [PinAnnotation] = []
+    private let pinManager = PinDataManager.shared  // Use shared pin manager
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -30,7 +30,7 @@ class MapViewController: UIViewController, MKMapViewDelegate {
         mapView.frame = view.bounds
         
         // Set initial region
-        let initialLocation = CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194)
+        let initialLocation = CLLocationCoordinate2D(latitude: 36.9741, longitude: -122.0308)
         let region = MKCoordinateRegion(
             center: initialLocation,
             span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
@@ -44,6 +44,18 @@ class MapViewController: UIViewController, MKMapViewDelegate {
             name: NSNotification.Name("AddPin"),
             object: nil
         )
+        
+        // Display existing pins
+        displayExistingPins()
+    }
+    
+    func displayExistingPins() {
+        for pin in pinManager.pins {
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = pin.coordinate
+            annotation.title = pin.name
+            mapView.addAnnotation(annotation)
+        }
     }
     
     @objc func handleAddPin(_ notification: Notification) {
@@ -52,8 +64,8 @@ class MapViewController: UIViewController, MKMapViewDelegate {
         // Get the center coordinate of the current map view
         let centerCoordinate = mapView.centerCoordinate
         
-        let pin = PinAnnotation(coordinate: centerCoordinate, name: name)
-        pins.append(pin)
+        // Add pin to shared manager instead of local array
+        pinManager.addPin(name: name, coordinate: centerCoordinate)
         
         // Add annotation to map
         let annotation = MKPointAnnotation()
@@ -85,8 +97,12 @@ class MapViewController: UIViewController, MKMapViewDelegate {
     func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
         if let annotation = view.annotation {
             mapView.removeAnnotation(annotation)
-            if let index = pins.firstIndex(where: { $0.coordinate.latitude == annotation.coordinate.latitude && $0.coordinate.longitude == annotation.coordinate.longitude }) {
-                pins.remove(at: index)
+            // Remove from shared manager instead of local array
+            if let index = pinManager.pins.firstIndex(where: {
+                $0.coordinate.latitude == annotation.coordinate.latitude &&
+                $0.coordinate.longitude == annotation.coordinate.longitude
+            }) {
+                pinManager.removePin(at: index)
             }
         }
     }
