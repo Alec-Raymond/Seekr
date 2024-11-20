@@ -12,6 +12,7 @@
 
 // Please comment any changes you make and your name.
 
+
 import SwiftUI
 import MapKit
 import UIKit
@@ -55,8 +56,41 @@ class MapViewController: UIViewController, MKMapViewDelegate {
             }
             .store(in: &cancellables)
         
+        // Observe selected pin changes
+        pinManager.$selectedPin
+            .sink { [weak self] pin in
+                if let pin = pin {
+                    self?.centerMapOnPin(pin)
+                }
+            }
+            .store(in: &cancellables)
+        
         // Display existing pins
         displayExistingPins()
+    }
+    
+    private func centerMapOnPin(_ pin: PinAnnotation) {
+        // Add a small delay to ensure the view is ready
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self = self else { return }
+            
+            // Create a slightly larger region to ensure the pin is visible
+            let region = MKCoordinateRegion(
+                center: pin.coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+            )
+            
+            // Animate to the new region
+            self.mapView.setRegion(region, animated: true)
+            
+            // Find and select the corresponding annotation
+            if let annotation = self.mapView.annotations.first(where: {
+                $0.coordinate.latitude == pin.coordinate.latitude &&
+                $0.coordinate.longitude == pin.coordinate.longitude
+            }) {
+                self.mapView.selectAnnotation(annotation, animated: true)
+            }
+        }
     }
     
     private func updateMapAnnotations(pins: [PinAnnotation]) {
@@ -170,6 +204,7 @@ struct MapView: View {
     @State private var progress_percentage = 0.2
     @State private var showingNamePrompt = false
     @State private var pinName = ""
+    @StateObject private var pinManager = PinDataManager.shared
     
     var body: some View {
         NavigationStack {

@@ -11,6 +11,7 @@ import MapKit
 // MARK: - Pin Data Manager
 class PinDataManager: ObservableObject {
     @Published var pins: [PinAnnotation] = []
+    @Published var selectedPin: PinAnnotation?
     
     static let shared = PinDataManager()
     
@@ -28,12 +29,17 @@ class PinDataManager: ObservableObject {
             pins.remove(at: index)
         }
     }
+    
+    func selectPin(_ pin: PinAnnotation) {
+        selectedPin = pin
+    }
 }
 
 // MARK: - Pin Card View
 struct PinCard: View {
     let pin: PinAnnotation
     @ObservedObject private var pinManager = PinDataManager.shared
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -66,6 +72,10 @@ struct PinCard: View {
         .background(Color(.systemBackground))
         .cornerRadius(10)
         .shadow(radius: 2)
+        .onTapGesture {
+            pinManager.selectPin(pin)
+            dismiss()
+        }
     }
 }
 
