@@ -12,41 +12,52 @@ import SwiftUI
 import CoreLocation
 
 
-class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDelegate, MKLocalSearchCompleterDelegate, UITableViewDataSource, UITableViewDelegate {
+class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDelegate, MKLocalSearchCompleterDelegate, UITableViewDataSource, UITableViewDelegate, LocationManagerDelegate, CompassDelegate {
+    
+    func didUpdateCompassBearing(_ bearing: CGFloat) {
+        UIView.animate(withDuration: 0.5) {
+            print(bearing)
+            self.compassImageView.transform = CGAffineTransform(rotationAngle: bearing)
+        }
+    }
+    
     
     var searchCompleter = MKLocalSearchCompleter()
+    var compass = Compass()
     let compassImageView = UIImageView(image: UIImage(named: "compass.png"))
     var searchResults = [MKLocalSearchCompletion]()
     var annotationList = [MKPointAnnotation]()
     var tableView = UITableView()
     var routeOverlay: MKPolyline?
+    var currentRoute: MKRoute?
     var userCentered = false
     let geocoder = CLGeocoder()
-    var lastLocation = CLLocation()
-    var lastHeading = CGFloat()
-    var lastBearing = CGFloat()
+    var currentLocation = CLLocation()
     var destinationLocation = CLLocation()
     var destinationDistance = CLLocationDistance()
+    var isLiveRoute = false
+    var routeTimer: Timer?
+    var initialized = false
     
-    let locationManager = CLLocationManager()
+    private let locationManager = LocationManager.shared
     lazy var mapView: MKMapView = {
         let map = MKMapView()
-        // map.showsUserLocation = true
+        map.showsUserLocation = true
         map.translatesAutoresizingMaskIntoConstraints = false
         return map
     }()
     
     // Go Button
-    let button: UIButton = {
-        let button = UIButton()
-        button.setTitle("GO", for: .normal)
-        button.backgroundColor = .blue
-        button.layer.cornerRadius = 15
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.isHidden = true
-        button.addTarget(self, action: #selector(buttonPressed), for: .touchUpInside)
+    let goButton: UIButton = {
+        let goButton = UIButton()
+        goButton.setTitle("GO", for: .normal)
+        goButton.backgroundColor = .blue
+        goButton.layer.cornerRadius = 15
+        goButton.translatesAutoresizingMaskIntoConstraints = false
+        goButton.isHidden = true
+        goButton.addTarget(ViewController.self, action: #selector(buttonPressed), for: .touchUpInside)
         // ^ Don't listen to the warning
-        return button
+        return goButton
     }()
     
     // Progress Bar
@@ -78,21 +89,23 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        locationManager.delegate = self
-        locationManager.requestWhenInUseAuthorization()
-        locationManager.startUpdatingHeading()
+        locationManager.addDelegate(self)
         locationManager.startUpdatingLocation()
+        locationManager.startUpdatingHeading()
         searchCompleter.delegate = self
         mapView.delegate = self
+        
+        compass.delegate = self
         
         tableView.delegate = self // Set the delegate
         tableView.dataSource = self
         setupUI()
         centerViewOnUserLocation()
     }
-//    override func viewDidAppear(_ animated: Bool) {
-//        centerViewOnUserLocation()
-//    }
+    
+    func startRouteTimer() {
+        routeTimer = Timer.scheduledTimer(timeInterval: 10.0, target: self, selector: #selector(recalculateRoute), userInfo: nil, repeats: true)
+    }
     
     private var searchTextFieldBottomConstraint: NSLayoutConstraint!
     private var tableViewTopConstraint: NSLayoutConstraint!
@@ -103,15 +116,15 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         view.addSubview(searchTextField)
         view.addSubview(tableView)
         view.addSubview(compassImageView)
-        view.addSubview(button)
+        view.addSubview(goButton)
         view.addSubview(progressView)
         
         // Center Go Button
         NSLayoutConstraint.activate([
-            button.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            button.topAnchor.constraint(equalTo: view.topAnchor, constant: 75),
-            button.widthAnchor.constraint(equalToConstant: 150),
-            button.heightAnchor.constraint(equalToConstant: 40)
+            goButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            goButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 75),
+            goButton.widthAnchor.constraint(equalToConstant: 150),
+            goButton.heightAnchor.constraint(equalToConstant: 40)
         ])
         
         // Center Progress Bar
@@ -156,11 +169,11 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     }
     
     func showGoButton() {
-        button.isHidden = false
+        goButton.isHidden = false
     }
     
     func hideGoButton() {
-        button.isHidden = true
+        goButton.isHidden = true
     }
     
     func showPBar() {
@@ -172,9 +185,10 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     }
     
     @objc func buttonPressed() {
-        hideGoButton()
-        centerViewOnUserLocation()
-        showPBar()
+        //hideGoButton()
+        //centerViewOnUserLocation()
+        //showPBar()
+        //startRouteTimer()
     }
     
     func updateProgressBar(distanceRemaining: CLLocationDistance) {
@@ -193,8 +207,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     func showSearch() {
         // Deactivate constraints
-        
-        
         UIView.animate(withDuration: 0.3, animations: {
             NSLayoutConstraint.deactivate([self.searchTextFieldBottomConstraint, self.tableViewTopConstraint, self.tableViewHeightConstraint])
             self.searchTextFieldBottomConstraint = self.searchTextField.bottomAnchor.constraint(equalTo: self.view.centerYAnchor)
@@ -213,21 +225,44 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.view.layoutIfNeeded()
         })
     }
-    
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let currentLocation = locations.last else { return }
-        lastLocation = currentLocation // store this location somewhere
-
+        // LocationManagerDelegate methods
+    func didUpdateLocation(_ location: CLLocation) {
+        currentLocation = location // store this location somewhere
+        if (!initialized) {
+            centerViewOnUserLocation()
+            initialized = true
+        }
         let distanceRemaining = currentLocation.distance(from: destinationLocation)
         // print("distance remaining: ", distanceRemaining)
         // need to give distanceRemaining to progress bar
         updateProgressBar(distanceRemaining: distanceRemaining)
     }
+
+    func didFailWithError(_ error: Error) {
+        print("Failed to update location: \(error)")
+    }
     
+    func didUpdateHeading(_ heading: CLHeading) {
+        return
+    }
+
+    /*
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
         self.lastHeading = CGFloat(newHeading.magneticHeading) * .pi / 180
         UIView.animate(withDuration: 0.5) {
-            self.compassImageView.transform = CGAffineTransform(rotationAngle: self.lastBearing - self.lastHeading)
+            var angle1 = self.lastBearing
+            var angle2 = self.nextStepBearing
+            if abs(angle1 - angle2) > .pi {
+                if angle1 < angle2 {
+                    angle1 += 2 * .pi
+                } else {
+                    angle2 += 2 * .pi
+                }
+            }
+            // Calculate the weighted average
+            let weightedAngle = (0.8 * angle1 + 0.2 * angle2)
+            let normalizedAngle = weightedAngle.truncatingRemainder(dividingBy: 2 * .pi)
+            self.compassImageView.transform = CGAffineTransform(rotationAngle: normalizedAngle - self.lastHeading)
         }
     }
     
@@ -249,17 +284,18 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         }
         //Lisa: changed the centerview on user location
         centerViewOnUserLocation()
-    }
+    }*/
 
     let scale: CGFloat = 300
 
     private func centerViewOnUserLocation() {
-        if let coordinate = locationManager.location?.coordinate {
-            let region = MKCoordinateRegion.init(center: coordinate,
-                                                 latitudinalMeters: scale,
-                                                 longitudinalMeters: scale)
-            mapView.setRegion(region, animated: true)
-        }
+        let coordinate = currentLocation.coordinate
+        let region = MKCoordinateRegion.init(center: coordinate,
+                                             latitudinalMeters: scale,
+                                             longitudinalMeters: scale)
+        print("view centered")
+        print(currentLocation.coordinate)
+        mapView.setRegion(region, animated: true)
     }
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
@@ -287,19 +323,18 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         let searchResult = searchResults[indexPath.row]
+        print(currentLocation.coordinate)
         cell.textLabel?.text = searchResult.title
         cell.detailTextLabel?.text = searchResult.subtitle
         return cell
     }
-    //Lisa: Commented out
-//    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-//        let selectedResult = searchResults[indexPath.row]
-//        print("Selected: \(selectedResult.title), \(selectedResult.subtitle)")
-//        
-//        // Handle the selected result (e.g., perform a search, update UI, etc.)
-//        convertAddressToAnnotation(name: selectedResult.title, address: selectedResult.subtitle, camera: true, path: true)
-//        //centerMapOnCoordinates(coord1: annotationList.last?.coordinate, coord2: <#T##CLLocationCoordinate2D#>)
-//    }
+
+    @objc func recalculateRoute() {
+        clearPath()
+        createPath(from: currentLocation.coordinate, to: destinationLocation.coordinate)
+        findBearings(userLocation: currentLocation.coordinate)
+    }
+    
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         hideSearch()
         //remove the selection after the row is tapped
@@ -318,8 +353,10 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
                 print("No matching location found")
                 return
             }
-            
+
             let coordinate = mapItem.placemark.coordinate
+            self.destinationLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+            compass.destinationCoordinates = destinationLocation.coordinate
             let name = mapItem.name ?? selectedResult.title
             
             
@@ -335,17 +372,17 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.annotationList.append(annotation)
             
             // center the map -> call centermap on coordinates
-            if let userLocation = self.locationManager.location?.coordinate {
-                self.centerMapOnCoordinates(coord1: userLocation, coord2: coordinate)
-                self.clearPath()
-                self.createPath(from: userLocation, to: coordinate)
-            }
+            recalculateRoute()
+            self.centerMapOnCoordinates(coord1: currentLocation.coordinate, coord2: destinationLocation.coordinate)
+
+            
             
             // clear search results
-            self.searchResults = []
-            self.tableView.reloadData()
+            //self.searchResults = []
+            //self.tableView.reloadData()
             // hide keyboard when not in uses
             self.searchTextField.resignFirstResponder()
+            showGoButton()
         }
     }
 
@@ -374,21 +411,26 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.mapView.addAnnotation(annotation)
             self.annotationList.append(annotation)
             if (camera) {
-                if let userLocation = self.locationManager.location?.coordinate {
-                    self.centerMapOnCoordinates(coord1: userLocation, coord2: coordinate)
-                }
+                self.centerMapOnCoordinates(coord1: self.currentLocation.coordinate, coord2: coordinate)
             }
             if (path) {
-                if let userLocation = self.locationManager.location?.coordinate {
-                    self.clearPath()
-                    self.createPath(from: userLocation, to: coordinate)
-                }
+                //self.clearPath()
+                self.createPath(from: self.currentLocation.coordinate, to: coordinate)
             }
         }
     }
     
+    func findBearings(userLocation: CLLocationCoordinate2D) {
+        if let currentRoute {
+            let route_points = currentRoute.steps[0].polyline.points()
+            let next_step = route_points[1]
+            compass.currentNextStepCoordinates = next_step.coordinate
+        }
+    }
+    
     func centerMapOnCoordinates(coord1: CLLocationCoordinate2D, coord2: CLLocationCoordinate2D) {
-        
+        print("coord1: ", coord1)
+        print("coord2: ", coord2)
         hidePBar()
         hideGoButton()
         
@@ -401,28 +443,17 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         let location1 = CLLocation(latitude: coord1.latitude, longitude: coord1.longitude)
         let location2 = CLLocation(latitude: coord2.latitude, longitude: coord2.longitude)
         let distance = location1.distance(from: location2)
-        let bearing = calculateBearing(from: coord1, to: coord2)
-        destinationLocation = CLLocation(latitude: coord2.latitude, longitude: coord2.longitude)
+        let bearing = compass.calculateBearing(from: coord1, to: coord2)
+        print("bearing: " ,bearing)
         destinationDistance = distance
         //center.longitude = center.longitude + (abs(distance) / 50000)
         camera.centerCoordinate = center
         camera.centerCoordinateDistance = 4.0 * distance
-        camera.heading = bearing
-        
+        camera.heading = (bearing * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
         mapView.setCamera(camera, animated: true)
         
         // need to make go button pop uo after this
-        showGoButton()
-    }
-    
-    func calculateBearing(from coordinate1: CLLocationCoordinate2D, to coordinate2: CLLocationCoordinate2D) -> CLLocationDirection {
-        let deltaLongitude = coordinate2.longitude - coordinate1.longitude
-        let y = sin(deltaLongitude) * cos(coordinate2.latitude)
-        let x = cos(coordinate1.latitude) * sin(coordinate2.latitude) - sin(coordinate1.latitude) * cos(coordinate2.latitude) * cos(deltaLongitude)
-        lastBearing = atan2(y, x)
-        let compassBearing = (lastBearing * 180 / .pi + 360).truncatingRemainder(dividingBy: 360) // Normalize to 0-360
-        // print(compassBearing)
-        return compassBearing
+        
     }
 
     func createPath(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) {
@@ -435,7 +466,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         let directionsRequest = MKDirections.Request()
         directionsRequest.source = sourceMapItem
         directionsRequest.destination = destinationMapItem
-        directionsRequest.transportType = .automobile
+        directionsRequest.transportType = .walking
 
         let directions = MKDirections(request: directionsRequest)
 
@@ -452,18 +483,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
                 self.mapView.removeOverlay(routeOverlay)
             }
 
-            let route = response.routes[0]
-            self.routeOverlay = route.polyline
-            self.mapView.addOverlay(route.polyline, level: .aboveRoads)
-
-            var regionRect = route.polyline.boundingMapRect
-            let wPadding = regionRect.size.width * 0.25
-            let hPadding = regionRect.size.height * 0.25
-
-            regionRect.size.width += wPadding
-            regionRect.size.height += hPadding
-
-            // self.mapView.setRegion(MKCoordinateRegion(regionRect), animated: true)
+            self.currentRoute = response.routes[0]
+            self.routeOverlay = self.currentRoute?.polyline
+            self.mapView.addOverlay(routeOverlay!, level: .aboveRoads)
         }
     }
 
