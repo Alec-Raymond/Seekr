@@ -44,7 +44,7 @@ class AuthViewModel: ObservableObject {
     }
     
     // Sign In Function. Checks passed email and password with database and if a match is found, the user is logged in and recorded in their session.
-    
+
     func signIn(withEmail email: String, password: String) async throws {
         do {
             print("Attempting to sign in user...")
