@@ -44,7 +44,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         button.layer.cornerRadius = 15
         button.translatesAutoresizingMaskIntoConstraints = false
         button.isHidden = true
-        button.addTarget(self, action: #selector(buttonPressed), for: .touchUpInside)
+        button.addTarget(ViewController.self, action: #selector(buttonPressed), for: .touchUpInside)
         // ^ Don't listen to the warning
         return button
     }()

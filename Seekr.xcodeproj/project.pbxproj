@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		95B6E75E2CED680B00BEFD67 /* FirebaseVertexAI in Frameworks */ = {isa = PBXBuildFile; productRef = 95B6E75D2CED680B00BEFD67 /* FirebaseVertexAI */; };
 		A4BC90FF2CAF0FCE00C60ED1 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = A4BC90FE2CAF0FC600C60ED1 /* README.md */; };
 		FF51B0C82CC3098500BBACF6 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = FF51B0C72CC3098500BBACF6 /* FirebaseAuth */; };
 		FF51B0CA2CC3098500BBACF6 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = FF51B0C92CC3098500BBACF6 /* FirebaseDatabase */; };
@@ -31,7 +32,6 @@
 		FF51B0F42CC340F100BBACF6 /* FirebasePerformance in Frameworks */ = {isa = PBXBuildFile; productRef = FF51B0F32CC340F100BBACF6 /* FirebasePerformance */; };
 		FF51B0F62CC340F100BBACF6 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = FF51B0F52CC340F100BBACF6 /* FirebaseRemoteConfig */; };
 		FF51B0F82CC340F100BBACF6 /* FirebaseStorageCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = FF51B0F72CC340F100BBACF6 /* FirebaseStorageCombine-Community */; };
-		FF51B0FA2CC340F100BBACF6 /* FirebaseVertexAI-Preview in Frameworks */ = {isa = PBXBuildFile; productRef = FF51B0F92CC340F100BBACF6 /* FirebaseVertexAI-Preview */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,8 +81,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FF51B0FA2CC340F100BBACF6 /* FirebaseVertexAI-Preview in Frameworks */,
 				FF51B0DA2CC340F100BBACF6 /* FirebaseAppCheck in Frameworks */,
+				95B6E75E2CED680B00BEFD67 /* FirebaseVertexAI in Frameworks */,
 				FF51B0CA2CC3098500BBACF6 /* FirebaseDatabase in Frameworks */,
 				FF51B0E02CC340F100BBACF6 /* FirebaseCore in Frameworks */,
 				FF51B0F82CC340F100BBACF6 /* FirebaseStorageCombine-Community in Frameworks */,
@@ -125,6 +125,13 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		95B6E75C2CED680B00BEFD67 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		A4BC90C32CAF0F3200C60ED1 = {
 			isa = PBXGroup;
 			children = (
@@ -132,6 +139,7 @@
 				A4BC90CE2CAF0F3200C60ED1 /* Seekr */,
 				A4BC90E42CAF0F3300C60ED1 /* SeekrTests */,
 				A4BC90EE2CAF0F3300C60ED1 /* SeekrUITests */,
+				95B6E75C2CED680B00BEFD67 /* Frameworks */,
 				A4BC90CD2CAF0F3200C60ED1 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -189,7 +197,7 @@
 				FF51B0F32CC340F100BBACF6 /* FirebasePerformance */,
 				FF51B0F52CC340F100BBACF6 /* FirebaseRemoteConfig */,
 				FF51B0F72CC340F100BBACF6 /* FirebaseStorageCombine-Community */,
-				FF51B0F92CC340F100BBACF6 /* FirebaseVertexAI-Preview */,
+				95B6E75D2CED680B00BEFD67 /* FirebaseVertexAI */,
 			);
 			productName = Seekr;
 			productReference = A4BC90CC2CAF0F3200C60ED1 /* Seekr.app */;
@@ -649,6 +657,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		95B6E75D2CED680B00BEFD67 /* FirebaseVertexAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FF51B0C62CC3098500BBACF6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseVertexAI;
+		};
 		FF51B0C72CC3098500BBACF6 /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = FF51B0C62CC3098500BBACF6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
@@ -763,11 +776,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = FF51B0C62CC3098500BBACF6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = "FirebaseStorageCombine-Community";
-		};
-		FF51B0F92CC340F100BBACF6 /* FirebaseVertexAI-Preview */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = FF51B0C62CC3098500BBACF6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = "FirebaseVertexAI-Preview";
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
