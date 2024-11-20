@@ -22,12 +22,18 @@ class PinDataManager: ObservableObject {
     func removePin(at index: Int) {
         pins.remove(at: index)
     }
+    
+    func removePin(withId id: UUID) {
+        if let index = pins.firstIndex(where: { $0.id == id }) {
+            pins.remove(at: index)
+        }
+    }
 }
 
 // MARK: - Pin Card View
 struct PinCard: View {
     let pin: PinAnnotation
-    let onDelete: () -> Void
+    @ObservedObject private var pinManager = PinDataManager.shared
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -38,7 +44,9 @@ struct PinCard: View {
                 
                 Spacer()
                 
-                Button(action: onDelete) {
+                Button(action: {
+                    pinManager.removePin(withId: pin.id)
+                }) {
                     Image(systemName: "trash")
                         .foregroundColor(.red)
                 }
@@ -80,11 +88,9 @@ struct PinsView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     LazyVStack(spacing: 16) {
-                        ForEach(Array(pinManager.pins.enumerated()), id: \.element.id) { index, pin in
-                            PinCard(pin: pin) {
-                                pinManager.removePin(at: index)
-                            }
-                            .padding(.horizontal)
+                        ForEach(pinManager.pins) { pin in
+                            PinCard(pin: pin)
+                                .padding(.horizontal)
                         }
                     }
                     .padding(.vertical)

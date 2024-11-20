@@ -15,10 +15,13 @@
 import SwiftUI
 import MapKit
 import UIKit
+import Combine
+
 // MARK: - Custom ViewController
 class MapViewController: UIViewController, MKMapViewDelegate {
     private var mapView: MKMapView!
-    private let pinManager = PinDataManager.shared  // Use shared pin manager
+    private let pinManager = PinDataManager.shared
+    private var cancellables = Set<AnyCancellable>()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -45,8 +48,28 @@ class MapViewController: UIViewController, MKMapViewDelegate {
             object: nil
         )
         
+        // Observe pin manager changes
+        pinManager.$pins
+            .sink { [weak self] pins in
+                self?.updateMapAnnotations(pins: pins)
+            }
+            .store(in: &cancellables)
+        
         // Display existing pins
         displayExistingPins()
+    }
+    
+    private func updateMapAnnotations(pins: [PinAnnotation]) {
+        // Remove all existing annotations
+        mapView.removeAnnotations(mapView.annotations)
+        
+        // Add new annotations for current pins
+        for pin in pins {
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = pin.coordinate
+            annotation.title = pin.name
+            mapView.addAnnotation(annotation)
+        }
     }
     
     func displayExistingPins() {
@@ -96,8 +119,6 @@ class MapViewController: UIViewController, MKMapViewDelegate {
     
     func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
         if let annotation = view.annotation {
-            mapView.removeAnnotation(annotation)
-            // Remove from shared manager instead of local array
             if let index = pinManager.pins.firstIndex(where: {
                 $0.coordinate.latitude == annotation.coordinate.latitude &&
                 $0.coordinate.longitude == annotation.coordinate.longitude
@@ -107,12 +128,14 @@ class MapViewController: UIViewController, MKMapViewDelegate {
         }
     }
 }
+
 // MARK: - Model
 struct PinAnnotation: Identifiable {
     let id = UUID()
     var coordinate: CLLocationCoordinate2D
     var name: String
 }
+
 // MARK: - ViewControllerWrapper
 struct ViewControllerWrapper: UIViewControllerRepresentable {
     typealias UIViewControllerType = MapViewController
@@ -141,6 +164,7 @@ struct ViewControllerWrapper: UIViewControllerRepresentable {
         }
     }
 }
+
 // MARK: - MapView
 struct MapView: View {
     @State private var progress_percentage = 0.2
