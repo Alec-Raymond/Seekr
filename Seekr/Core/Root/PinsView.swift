@@ -58,6 +58,15 @@ class PinDataManager: ObservableObject {
             abs(pin.coordinate.longitude - presetPin.coordinate.longitude) < 0.0001
         }
     }
+    
+    func filteredLocations(_ searchText: String) -> [PinAnnotation] {
+        if searchText.isEmpty {
+            return ucscLocations
+        }
+        return ucscLocations.filter { pin in
+            pin.name.lowercased().contains(searchText.lowercased())
+        }
+    }
 }
 
 // MARK: - Pin Card View
@@ -149,10 +158,39 @@ struct PresetPinCard: View {
     }
 }
 
+// MARK: - Search Bar View
+struct SearchBar: View {
+    @Binding var text: String
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.gray)
+            
+            TextField("Search UCSC locations...", text: $text)
+                .textFieldStyle(PlainTextFieldStyle())
+            
+            if !text.isEmpty {
+                Button(action: {
+                    text = ""
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.gray)
+                }
+            }
+        }
+        .padding(8)
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+        .padding(.horizontal)
+    }
+}
+
 // MARK: - Pins View
 struct PinsView: View {
     @StateObject private var pinManager = PinDataManager.shared
     @State private var selectedSection = 0
+    @State private var searchText = ""
     
     var body: some View {
         NavigationStack {
@@ -163,6 +201,10 @@ struct PinsView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding()
+                
+                if selectedSection == 1 {
+                    SearchBar(text: $searchText)
+                }
                 
                 ScrollView {
                     if selectedSection == 0 {
@@ -189,7 +231,7 @@ struct PinsView: View {
                     } else {
                         // UCSC Locations Section
                         LazyVStack(spacing: 16) {
-                            ForEach(pinManager.ucscLocations) { pin in
+                            ForEach(pinManager.filteredLocations(searchText)) { pin in
                                 PresetPinCard(pin: pin)
                                     .padding(.horizontal)
                             }
