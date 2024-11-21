@@ -16,12 +16,14 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if viewModel.userSession != nil {
-                MapView()
-                //ProfileView()
-            } else {
-                LoginView()
-            }
+            MapView()
+//            Lisa: Commented out because log in does not work for me
+//            if viewModel.userSession != nil {
+//                MapView()
+//                //ProfileView()
+//            } else {
+//                LoginView()
+//            }
         }
     }
 }

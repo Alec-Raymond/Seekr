@@ -33,6 +33,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     var haveDestination = false
     // Zander: moved scale here
     let scale: CGFloat = 300
+//    Lisa added instanse of notificationManager
+    private let notificationManager = NotificationManager.shared
     
     let locationManager = CLLocationManager()
     lazy var mapView: MKMapView = {
@@ -94,6 +96,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         tableView.dataSource = self
         setupUI()
         centerViewOnUserLocation()
+//      Lisa added checking for permission of notifications
+        notificationManager.checkForPermission()
     }
 //    override func viewDidAppear(_ animated: Bool) {
 //        centerViewOnUserLocation()
