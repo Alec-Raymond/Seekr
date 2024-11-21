@@ -101,7 +101,7 @@ class CompassImageView: UIView, CompassDelegate {
     
     func didUpdateCompassBearing(_ bearing: CGFloat) {
         let currentHeading = abs(bearing / .pi * 180 - 180.0)
-        print(currentHeading)
+        print("heading: ", currentHeading)
         if (currentHeading > 160) {
             greenCompass.alpha = 1.0
             yellowCompass.alpha = 0.0
