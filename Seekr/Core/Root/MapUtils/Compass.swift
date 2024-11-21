@@ -73,3 +73,107 @@ class Compass: NSObject, CLLocationManagerDelegate, LocationManagerDelegate {
         return
     }
 }
+
+import UIKit
+
+class CompassImageView: UIView, CompassDelegate {
+    let compass = Compass()
+    
+    private let greenCompass = UIImageView(image: UIImage(named: "compass_green.png"))
+    private let yellowCompass = UIImageView(image: UIImage(named: "compass_yellow.png"))
+    private let redCompass = UIImageView(image: UIImage(named: "compass_red.png"))
+    
+    init() {
+        super.init(frame: .zero)
+        setupImageViews()
+        compass.delegate = self
+    }
+    
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupImageViews()
+        compass.delegate = self
+    }
+    
+    func didUpdateLocation(_ location: CLLocation) {
+        return
+    }
+    
+    func didUpdateCompassBearing(_ bearing: CGFloat) {
+        let currentHeading = abs(bearing / .pi * 180 - 180.0)
+        print(currentHeading)
+        if (currentHeading > 160) {
+            greenCompass.alpha = 1.0
+            yellowCompass.alpha = 0.0
+            redCompass.alpha = 0.0
+        } else if (currentHeading > 140) {
+            greenCompass.alpha = 1.0
+            yellowCompass.alpha = (160 - currentHeading) / 20.0
+            redCompass.alpha = 0.0
+        } else if (currentHeading > 120) {
+            greenCompass.alpha = (currentHeading - 120) / 20.0
+            yellowCompass.alpha = 1.0
+            redCompass.alpha = 0.0
+        } else if (currentHeading > 80) {
+            greenCompass.alpha = 0.0
+            yellowCompass.alpha = 1.0
+            redCompass.alpha = 0.0
+        } else if (currentHeading > 60) {
+            greenCompass.alpha = 0.0
+            yellowCompass.alpha = 1.0
+            redCompass.alpha = (80 - currentHeading) / 20.0
+        } else if (currentHeading > 40) {
+            greenCompass.alpha = 0.0
+            yellowCompass.alpha = (currentHeading - 40) / 20.0
+            redCompass.alpha = 1.0
+        } else {
+            greenCompass.alpha = 0.0
+            yellowCompass.alpha = 0.0
+            redCompass.alpha = 1.0
+        }
+        UIView.animate(withDuration: 0.5) {
+            print(bearing)
+            self.greenCompass.transform = CGAffineTransform(rotationAngle: bearing)
+            self.yellowCompass.transform = CGAffineTransform(rotationAngle: bearing)
+            self.redCompass.transform = CGAffineTransform(rotationAngle: bearing)
+        }
+    }
+    
+    func didFailWithError(_ error: any Error) {
+        return
+    }
+    
+    private func setupImageViews() {
+        // Set up the images
+        
+        greenCompass.translatesAutoresizingMaskIntoConstraints = false
+        yellowCompass.translatesAutoresizingMaskIntoConstraints = false
+        redCompass.translatesAutoresizingMaskIntoConstraints = false
+        
+        addSubview(redCompass)
+        addSubview(yellowCompass)
+        addSubview(greenCompass)
+        
+        NSLayoutConstraint.activate([
+            greenCompass.topAnchor.constraint(equalTo: topAnchor),
+            greenCompass.leadingAnchor.constraint(equalTo: leadingAnchor),
+            greenCompass.trailingAnchor.constraint(equalTo: trailingAnchor),
+            greenCompass.bottomAnchor.constraint(equalTo: bottomAnchor),
+            
+            yellowCompass.topAnchor.constraint(equalTo: topAnchor),
+            yellowCompass.leadingAnchor.constraint(equalTo: leadingAnchor),
+            yellowCompass.trailingAnchor.constraint(equalTo: trailingAnchor),
+            yellowCompass.bottomAnchor.constraint(equalTo: bottomAnchor),
+            
+            redCompass.topAnchor.constraint(equalTo: topAnchor),
+            redCompass.leadingAnchor.constraint(equalTo: leadingAnchor),
+            redCompass.trailingAnchor.constraint(equalTo: trailingAnchor),
+            redCompass.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+        
+        greenCompass.alpha = 1.0
+        yellowCompass.alpha = 0.0
+        redCompass.alpha = 0.0
+    }
+}
+

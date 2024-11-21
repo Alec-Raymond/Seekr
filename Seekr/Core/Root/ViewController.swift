@@ -12,7 +12,7 @@ import SwiftUI
 import CoreLocation
 
 
-class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDelegate, MKLocalSearchCompleterDelegate, UITableViewDataSource, UITableViewDelegate, LocationManagerDelegate, CompassDelegate {
+class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDelegate, MKLocalSearchCompleterDelegate, UITableViewDataSource, UITableViewDelegate, LocationManagerDelegate {
     
     func didUpdateCompassBearing(_ bearing: CGFloat) {
         UIView.animate(withDuration: 0.5) {
@@ -23,8 +23,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     
     var searchCompleter = MKLocalSearchCompleter()
-    var compass = Compass()
-    let compassImageView = UIImageView(image: UIImage(named: "compass.png"))
+    let compassImageView = CompassImageView()
     var searchResults = [MKLocalSearchCompletion]()
     var annotationList = [MKPointAnnotation]()
     var tableView = UITableView()
@@ -94,8 +93,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         locationManager.startUpdatingHeading()
         searchCompleter.delegate = self
         mapView.delegate = self
-        
-        compass.delegate = self
         
         tableView.delegate = self // Set the delegate
         tableView.dataSource = self
@@ -185,10 +182,10 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     }
     
     @objc func buttonPressed() {
-        //hideGoButton()
-        //centerViewOnUserLocation()
-        //showPBar()
-        //startRouteTimer()
+        hideGoButton()
+        centerViewOnUserLocation()
+        showPBar()
+        startRouteTimer()
     }
     
     func updateProgressBar(distanceRemaining: CLLocationDistance) {
@@ -356,7 +353,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
 
             let coordinate = mapItem.placemark.coordinate
             self.destinationLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-            compass.destinationCoordinates = destinationLocation.coordinate
+            compassImageView.compass.destinationCoordinates = destinationLocation.coordinate
             let name = mapItem.name ?? selectedResult.title
             
             
@@ -424,7 +421,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         if let currentRoute {
             let route_points = currentRoute.steps[0].polyline.points()
             let next_step = route_points[1]
-            compass.currentNextStepCoordinates = next_step.coordinate
+            compassImageView.compass.currentNextStepCoordinates = next_step.coordinate
         }
     }
     
@@ -443,7 +440,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         let location1 = CLLocation(latitude: coord1.latitude, longitude: coord1.longitude)
         let location2 = CLLocation(latitude: coord2.latitude, longitude: coord2.longitude)
         let distance = location1.distance(from: location2)
-        let bearing = compass.calculateBearing(from: coord1, to: coord2)
+        let bearing = compassImageView.compass.calculateBearing(from: coord1, to: coord2)
         print("bearing: " ,bearing)
         destinationDistance = distance
         //center.longitude = center.longitude + (abs(distance) / 50000)
