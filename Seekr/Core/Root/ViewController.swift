@@ -55,7 +55,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         goButton.layer.cornerRadius = 15
         goButton.translatesAutoresizingMaskIntoConstraints = false
         goButton.isHidden = true
-        goButton.addTarget(ViewController.self, action: #selector(buttonPressed), for: .touchUpInside)
+        goButton.addTarget(self, action: #selector(buttonPressed), for: .touchUpInside)
         // ^ Don't listen to the warning
         return goButton
     }()
