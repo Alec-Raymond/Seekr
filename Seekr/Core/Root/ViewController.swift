@@ -49,7 +49,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         button.layer.cornerRadius = 15
         button.translatesAutoresizingMaskIntoConstraints = false
         button.isHidden = true
-        button.addTarget(ViewController.self, action: #selector(buttonPressed), for: .touchUpInside)
+        button.addTarget(self, action: #selector(buttonPressed), for: .touchUpInside)
         // ^ Don't listen to the warning
         return button
     }()
@@ -442,8 +442,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         let x = cos(coordinate1.latitude) * sin(coordinate2.latitude) - sin(coordinate1.latitude) * cos(coordinate2.latitude) * cos(deltaLongitude)
         lastBearing = atan2(y, x)
         let compassBearing = (lastBearing * 180 / .pi + 360).truncatingRemainder(dividingBy: 360) // Normalize to 0-360
-
-        print(compassBearing)
+        // print(compassBearing)
         return compassBearing
     }
 
