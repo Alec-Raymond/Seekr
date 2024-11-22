@@ -15,7 +15,7 @@ import Firebase
 
 @main
 struct SeekrApp: App {
-    @StateObject var viewModel = AuthViewModel()
+    @StateObject var authViewModel = AuthViewModel()
     
     let persistenceController = PersistenceController.shared
     
@@ -27,7 +27,7 @@ struct SeekrApp: App {
         WindowGroup {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
-                .environmentObject(viewModel)
+                .environmentObject(authViewModel)
         }
     }
 }
