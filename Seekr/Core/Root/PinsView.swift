@@ -1,10 +1,3 @@
-//
-//  PinsView.swift
-//  Seekr
-//
-//  Created by Taya Ambrose on 11/20/24.
-//
-
 import SwiftUI
 import MapKit
 
@@ -25,6 +18,25 @@ class PinDataManager: ObservableObject {
         PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9891, longitude: -122.0582), name: "Farm & Garden")
     ]
     
+    let coffeeShops: [PinAnnotation] = [
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9728, longitude: -122.0250), name: "Santa Cruz Coffee Roasters"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9744, longitude: -122.0263), name: "Verve Coffee Roasters (Downtown)"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9680, longitude: -122.0233), name: "Verve Coffee Roasters"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9712, longitude: -122.0257), name: "11th Hour Coffee"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9719, longitude: -122.0261), name: "Shrine Coffee"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9725, longitude: -122.0255), name: "Mariposa Coffee Bar"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9736, longitude: -122.0244), name: "Cafe Delmarette"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9621, longitude: -122.0248), name: "Cat & Cloud Coffee"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9509, longitude: -122.0486), name: "Steamer Lane Supply"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9497, longitude: -122.0570), name: "11th Hour Coffee Westside"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9725, longitude: -122.0259), name: "The Abbey Coffee Lounge"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9716, longitude: -122.0241), name: "Hidden Fortress Coffee @ Cruzio"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9683, longitude: -122.0232), name: "Alta Organic Coffee Warehouse & Roasting Co."),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9717, longitude: -122.0252), name: "Firefly Coffee House"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9720, longitude: -122.0256), name: "Peoples Coffee"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9713, longitude: -122.0248), name: "Lulu's On Mission")
+    ]
+    
     static let shared = PinDataManager()
     
     func addPin(name: String, coordinate: CLLocationCoordinate2D) {
@@ -34,7 +46,7 @@ class PinDataManager: ObservableObject {
     
     func addPresetPin(_ pin: PinAnnotation) {
         pins.append(pin)
-        selectedPin = pin  // Select the newly added pin
+        selectedPin = pin
     }
     
     func removePin(at index: Int) {
@@ -58,14 +70,22 @@ class PinDataManager: ObservableObject {
             abs(pin.coordinate.longitude - presetPin.coordinate.longitude) < 0.0001
         }
     }
+}
+
+struct LocationTypeButton: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
     
-    func filteredLocations(_ searchText: String) -> [PinAnnotation] {
-        if searchText.isEmpty {
-            return ucscLocations
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.blue.opacity(0.2) : Color.clear)
+                .cornerRadius(8)
         }
-        return ucscLocations.filter { pin in
-            pin.name.lowercased().contains(searchText.lowercased())
-        }
+        .foregroundColor(.primary)
     }
 }
 
@@ -140,7 +160,9 @@ struct PresetPinCard: View {
             HStack {
                 Image(systemName: "mappin.circle.fill")
                     .foregroundColor(.blue)
-                Text("UCSC Location")
+                Text(String(format: "%.4f, %.4f",
+                     pin.coordinate.latitude,
+                     pin.coordinate.longitude))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -167,7 +189,7 @@ struct SearchBar: View {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.gray)
             
-            TextField("Search UCSC locations...", text: $text)
+            TextField("Search locations...", text: $text)
                 .textFieldStyle(PlainTextFieldStyle())
             
             if !text.isEmpty {
@@ -190,20 +212,55 @@ struct SearchBar: View {
 struct PinsView: View {
     @StateObject private var pinManager = PinDataManager.shared
     @State private var selectedSection = 0
+    @State private var selectedLocationType = 0
     @State private var searchText = ""
+    
+    var filteredLocations: [PinAnnotation] {
+        let locations: [PinAnnotation]
+        switch selectedLocationType {
+        case 0:
+            locations = pinManager.ucscLocations + pinManager.coffeeShops
+        case 1:
+            locations = pinManager.ucscLocations
+        default:
+            locations = pinManager.coffeeShops
+        }
+        
+        if searchText.isEmpty {
+            return locations
+        }
+        return locations.filter { pin in
+            pin.name.lowercased().contains(searchText.lowercased())
+        }
+    }
     
     var body: some View {
         NavigationStack {
             VStack {
                 Picker("Pin Type", selection: $selectedSection) {
                     Text("My Pins").tag(0)
-                    Text("UCSC Locations").tag(1)
+                    Text("Add Locations").tag(1)
                 }
                 .pickerStyle(.segmented)
                 .padding()
                 
                 if selectedSection == 1 {
-                    SearchBar(text: $searchText)
+                    VStack {
+                        HStack(spacing: 12) {
+                            LocationTypeButton(title: "All", isSelected: selectedLocationType == 0) {
+                                selectedLocationType = 0
+                            }
+                            LocationTypeButton(title: "UCSC Locations", isSelected: selectedLocationType == 1) {
+                                selectedLocationType = 1
+                            }
+                            LocationTypeButton(title: "Coffee Shops", isSelected: selectedLocationType == 2) {
+                                selectedLocationType = 2
+                            }
+                        }
+                        .padding(.horizontal)
+                        
+                        SearchBar(text: $searchText)
+                    }
                 }
                 
                 ScrollView {
@@ -229,9 +286,9 @@ struct PinsView: View {
                             .padding(.vertical)
                         }
                     } else {
-                        // UCSC Locations Section
+                        // Locations Section
                         LazyVStack(spacing: 16) {
-                            ForEach(pinManager.filteredLocations(searchText)) { pin in
+                            ForEach(filteredLocations) { pin in
                                 PresetPinCard(pin: pin)
                                     .padding(.horizontal)
                             }
