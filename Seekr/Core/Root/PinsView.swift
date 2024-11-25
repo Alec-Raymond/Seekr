@@ -18,6 +18,19 @@ class PinDataManager: ObservableObject {
         PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9891, longitude: -122.0582), name: "Farm & Garden")
     ]
     
+    let bathrooms: [PinAnnotation] = [
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9634, longitude: -122.0216), name: "Pacific Avenue Public Restroom (Downtown)"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9641, longitude: -122.0251), name: "Locust Street Garage Restroom"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9627, longitude: -122.0251), name: "Cedar Street Parking Garage Restroom"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9509, longitude: -122.0486), name: "Cowell Beach Restroom"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9580, longitude: -122.0250), name: "Lighthouse Field State Beach Restroom"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9644, longitude: -122.0107), name: "San Lorenzo Park Restroom"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9622, longitude: -122.0248), name: "Abbott Square Market Restroom"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9647, longitude: -122.0214), name: "Santa Cruz Metro Station Restroom"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9621, longitude: -122.0273), name: "Wharf Public Restroom"),
+        PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9571, longitude: -122.0258), name: "West Cliff Drive Public Restroom")
+    ]
+    
     let coffeeShops: [PinAnnotation] = [
         PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9728, longitude: -122.0250), name: "Santa Cruz Coffee Roasters"),
         PinAnnotation(coordinate: CLLocationCoordinate2D(latitude: 36.9744, longitude: -122.0263), name: "Verve Coffee Roasters (Downtown)"),
@@ -215,54 +228,62 @@ struct PinsView: View {
     @State private var selectedLocationType = 0
     @State private var searchText = ""
     
-    var filteredLocations: [PinAnnotation] {
-        let locations: [PinAnnotation]
-        switch selectedLocationType {
-        case 0:
-            locations = pinManager.ucscLocations + pinManager.coffeeShops
-        case 1:
-            locations = pinManager.ucscLocations
-        default:
-            locations = pinManager.coffeeShops
+        var filteredLocations: [PinAnnotation] {
+            let locations: [PinAnnotation]
+            switch selectedLocationType {
+            case 0:
+                locations = pinManager.ucscLocations + pinManager.coffeeShops + pinManager.bathrooms
+            case 1:
+                locations = pinManager.ucscLocations
+            case 2:
+                locations = pinManager.coffeeShops
+            case 3:
+                locations = pinManager.bathrooms
+            default:
+                locations = []
+            }
+            
+            if searchText.isEmpty {
+                return locations
+            }
+            return locations.filter { pin in
+                pin.name.lowercased().contains(searchText.lowercased())
+            }
         }
         
-        if searchText.isEmpty {
-            return locations
-        }
-        return locations.filter { pin in
-            pin.name.lowercased().contains(searchText.lowercased())
-        }
-    }
-    
-    var body: some View {
-        NavigationStack {
-            VStack {
-                Picker("Pin Type", selection: $selectedSection) {
-                    Text("My Pins").tag(0)
-                    Text("Add Locations").tag(1)
-                }
-                .pickerStyle(.segmented)
-                .padding()
-                
-                if selectedSection == 1 {
-                    VStack {
-                        HStack(spacing: 12) {
-                            LocationTypeButton(title: "All", isSelected: selectedLocationType == 0) {
-                                selectedLocationType = 0
-                            }
-                            LocationTypeButton(title: "UCSC Locations", isSelected: selectedLocationType == 1) {
-                                selectedLocationType = 1
-                            }
-                            LocationTypeButton(title: "Coffee Shops", isSelected: selectedLocationType == 2) {
-                                selectedLocationType = 2
-                            }
-                        }
-                        .padding(.horizontal)
-                        
-                        SearchBar(text: $searchText)
+        var body: some View {
+            NavigationStack {
+                VStack {
+                    Picker("Pin Type", selection: $selectedSection) {
+                        Text("My Pins").tag(0)
+                        Text("Add Locations").tag(1)
                     }
-                }
-                
+                    .pickerStyle(.segmented)
+                    .padding()
+                    
+                    if selectedSection == 1 {
+                        VStack {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    LocationTypeButton(title: "All", isSelected: selectedLocationType == 0) {
+                                        selectedLocationType = 0
+                                    }
+                                    LocationTypeButton(title: "UCSC", isSelected: selectedLocationType == 1) {
+                                        selectedLocationType = 1
+                                    }
+                                    LocationTypeButton(title: "Coffee", isSelected: selectedLocationType == 2) {
+                                        selectedLocationType = 2
+                                    }
+                                    LocationTypeButton(title: "Bathrooms", isSelected: selectedLocationType == 3) {
+                                        selectedLocationType = 3
+                                    }
+                                }
+                                .padding(.horizontal, 12)
+                            }
+                            SearchBar(text: $searchText)
+                        }
+                    }
+                                    
                 ScrollView {
                     if selectedSection == 0 {
                         // My Pins Section
