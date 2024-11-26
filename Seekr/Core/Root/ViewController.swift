@@ -243,46 +243,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         return
     }
 
-    /*
-    func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        self.lastHeading = CGFloat(newHeading.magneticHeading) * .pi / 180
-        UIView.animate(withDuration: 0.5) {
-            var angle1 = self.lastBearing
-            var angle2 = self.nextStepBearing
-            if abs(angle1 - angle2) > .pi {
-                if angle1 < angle2 {
-                    angle1 += 2 * .pi
-                } else {
-                    angle2 += 2 * .pi
-                }
-            }
-            // Calculate the weighted average
-            let weightedAngle = (0.8 * angle1 + 0.2 * angle2)
-            let normalizedAngle = weightedAngle.truncatingRemainder(dividingBy: 2 * .pi)
-            self.compassImageView.transform = CGAffineTransform(rotationAngle: normalizedAngle - self.lastHeading)
-        }
-    }
-    
-    func locationManagerShouldDisplayHeadingCalibration(_ manager: CLLocationManager) -> Bool {
-        return true
-    }
-
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        checkLocationAuthorization()
-    }
-
-    private func checkLocationAuthorization() {
-        switch locationManager.authorizationStatus {
-        case .authorizedWhenInUse, .authorizedAlways:
-            mapView.showsUserLocation = true
-            locationManager.startUpdatingLocation()
-        default:
-            locationManager.requestWhenInUseAuthorization()
-        }
-        //Lisa: changed the centerview on user location
-        centerViewOnUserLocation()
-    }*/
-
     let scale: CGFloat = 300
 
     private func centerViewOnUserLocation() {
@@ -372,12 +332,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             recalculateRoute()
             self.centerMapOnCoordinates(coord1: currentLocation.coordinate, coord2: destinationLocation.coordinate)
 
-            
-            
-            // clear search results
-            //self.searchResults = []
-            //self.tableView.reloadData()
-            // hide keyboard when not in uses
             self.searchTextField.resignFirstResponder()
             showGoButton()
         }
@@ -443,14 +397,10 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         let bearing = compassImageView.compass.calculateBearing(from: coord1, to: coord2)
         print("bearing: " ,bearing)
         destinationDistance = distance
-        //center.longitude = center.longitude + (abs(distance) / 50000)
         camera.centerCoordinate = center
         camera.centerCoordinateDistance = 4.0 * distance
         camera.heading = (bearing * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
         mapView.setCamera(camera, animated: true)
-        
-        // need to make go button pop uo after this
-        
     }
 
     func createPath(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) {
