@@ -19,14 +19,13 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            MainView()
-//            if authViewModel.userSession != nil {
-//                //Home page View
-//                MainView()
-//            } else {
-//                // Login/Registration page View
-//                AuthenticationView()
-//            }
+            if authViewModel.userSession != nil {
+                //Home page View
+                MainView()
+            } else {
+                // Login/Registration page View
+                AuthenticationView()
+            }
         }
         // This onappear task ensures that no action for rendering is made until the result for the current user's session status is returned.
         // (This avoids redundant loading)
