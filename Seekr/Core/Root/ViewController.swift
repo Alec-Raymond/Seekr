@@ -41,8 +41,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     var haveDestination = false
     // Zander: moved scale here
     let scale: CGFloat = 300
-//    Lisa added instanse of notificationManager
-    private let notificationManager = NotificationManager.shared
     
     private let locationManager = LocationManager.shared
     lazy var mapView: MKMapView = {
@@ -102,8 +100,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         tableView.dataSource = self
         setupUI()
         centerViewOnUserLocation()
-//      Lisa added checking for permission of notifications
-        notificationManager.checkForPermission()
     }
     
     func startRouteTimer() {
@@ -215,7 +211,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         let p = Float(destinationDistance - distanceRemaining) / Float(destinationDistance)
         if (p > 0) {
             progressView.progress = p
-//            notificationManager.dispatchNotification()
         }
         else if (p > 1 && distanceRemaining > 0) {
             progressView.progress = 0.0
@@ -244,6 +239,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.view.layoutIfNeeded()
         })
     }
+
     //implement below function for cleaner code
 //    func checkForWrongDirection(currentDistance: CLLocationDistance, previousDistance: CLLocationDistance) {
 //        let progress = Float(destinationDistance - currentDistance) / Float(destinationDistance)
@@ -273,6 +269,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
 //        going the right direction
 //        let distanceRemaining = currentLocation.distance(from: destinationLocation)
         let previousDistance = destinationDistance  //location during 1st time period*/
+
   
     // LocationManagerDelegate methods
     func didUpdateLocation(_ location: CLLocation) {
@@ -299,21 +296,21 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
 //            checkForWrongDirection(currentDistance: distanceRemaining, previousDistance: destinationDistance)
 //            if arrived
             else if distanceRemaining < 50 { // need to fine tune
+
                 haveDestination = false
                 hidePBar()
                 // we have arrived, do something here
                 // perhaps lisa can add a notification
                 print("you have arrived")
                 
-                
-            } else {//going right direction
+            } else {
                 // Zander added: update the progress bar with the
                 // current distance remaining
-                notificationManager.ableToSchedule = true
                 updateProgressBar(distanceRemaining: distanceRemaining)
             */
         }
     }
+  
     func didFailWithError(_ error: Error) {
         print("Failed to update location: \(error)")
     }
