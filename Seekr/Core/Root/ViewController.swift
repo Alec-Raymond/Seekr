@@ -203,6 +203,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         let p = Float(destinationDistance - distanceRemaining) / Float(destinationDistance)
         if (p > 0) {
             progressView.progress = p
+//            notificationManager.dispatchNotification()
         }
         else if (p > 1 && distanceRemaining > 0) {
             progressView.progress = 0.0
@@ -214,7 +215,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     func showSearch() {
         // Deactivate constraints
-        
         UIView.animate(withDuration: 0.3, animations: {
             NSLayoutConstraint.deactivate([self.searchTextFieldBottomConstraint, self.tableViewTopConstraint, self.tableViewHeightConstraint])
             self.searchTextFieldBottomConstraint = self.searchTextField.bottomAnchor.constraint(equalTo: self.view.centerYAnchor)
@@ -233,25 +233,65 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.view.layoutIfNeeded()
         })
     }
+    //implement below function for cleaner code
+//    func checkForWrongDirection(currentDistance: CLLocationDistance, previousDistance: CLLocationDistance) {
+//        let progress = Float(destinationDistance - currentDistance) / Float(destinationDistance)
+//        //percentage of (previous distance - current distance) / destination distance
+//        //how to calculate per
+//        print(progress)
+//        if progress > 0 {
+//            // Moving closer to the destination
+//            notificationManager.ableToSchedule = true
+//            }
+//        else if currentDistance > previousDistance {
+//            // Moving farther from the destination (wrong direction)
+//            notificationManager.dispatchNotification()
+//            print("Notification: You are going in the wrong direction.")
+//            notificationManager.ableToSchedule = false // Prevent multiple notifications until going the right way
+//        }
+//            
+//                
+//            
+//    }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let currentLocation = locations.last else { return }
         lastLocation = currentLocation
+//        Lisa:
+//        compare previousDistance to DistanceRemaining to determine if we are
+//        going the right direction
+//        let distanceRemaining = currentLocation.distance(from: destinationLocation)
+        let previousDistance = destinationDistance  //location during 1st time period
 
         // Zander added: calculate distance remaining if
         // we have a destination
-        if haveDestination {
-            let distanceRemaining = currentLocation.distance(from: destinationLocation)
-            if distanceRemaining < 50 { // need to fine tune
+
+        if haveDestination {//if started the route
+            let distanceRemaining = currentLocation.distance(from: destinationLocation)//location during 2nd time period
+            destinationDistance = distanceRemaining
+            print("progress", previousDistance-distanceRemaining)
+            let progress = Float(previousDistance - distanceRemaining) / Float(previousDistance)*100.0//should be positive for right direction, negative for wrong direction
+//            checkForWrongDirection(currentDistance: distanceRemaining, previousDistance: previousDistance)
+            print(progress)
+            if (progress < 0) {//if going wrong direction
+                notificationManager.dispatchNotification()
+                self.createPath(from: lastLocation.coordinate, to: destinationLocation.coordinate)
+                print("Warning: You're going in the wrong direction!")
+            }
+//            checkForWrongDirection(currentDistance: distanceRemaining, previousDistance: destinationDistance)
+//            if arrived
+            else if distanceRemaining < 50 { // need to fine tune
                 haveDestination = false
                 hidePBar()
                 // we have arrived, do something here
                 // perhaps lisa can add a notification
                 print("you have arrived")
                 
-            } else {
+                
+            } else {//going right direction
                 // Zander added: update the progress bar with the
                 // current distance remaining
+                notificationManager.ableToSchedule = true
                 updateProgressBar(distanceRemaining: distanceRemaining)
             }
         }
@@ -322,7 +362,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         cell.detailTextLabel?.text = searchResult.subtitle
         return cell
     }
-    
+
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         hideSearch()
         //remove the selection after the row is tapped
