@@ -34,9 +34,16 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     var currentLocation = CLLocation()
     var destinationLocation = CLLocation()
     var destinationDistance = CLLocationDistance()
+
     var isLiveRoute = false
     var routeTimer: Timer?
     var initialized = false
+    // Zander added: haveDestination to keep track if the
+    // user is currently navigating or has not yet started
+    // their route
+    var haveDestination = false
+    // Zander: moved scale here
+    let scale: CGFloat = 300
     
     private let locationManager = LocationManager.shared
     lazy var mapView: MKMapView = {
@@ -46,6 +53,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         return map
     }()
     
+
     // Go Button
     let goButton: UIButton = {
         let goButton = UIButton()
@@ -55,11 +63,10 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         goButton.translatesAutoresizingMaskIntoConstraints = false
         goButton.isHidden = true
         goButton.addTarget(self, action: #selector(buttonPressed), for: .touchUpInside)
-        // ^ Don't listen to the warning
         return goButton
     }()
     
-    // Progress Bar
+    // Zander added: Progress Bar
     let progressView: UIProgressView = {
         let progressView = UIProgressView()
         progressView.backgroundColor = UIColor.lightGray.withAlphaComponent(0.3)
@@ -116,7 +123,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         view.addSubview(goButton)
         view.addSubview(progressView)
         
-        // Center Go Button
+        // Zander added: Center Go Button and Progress Bar
         NSLayoutConstraint.activate([
             goButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             goButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 75),
@@ -165,32 +172,48 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         showSearch()
     }
     
+    // Zander added: show Go Button
     func showGoButton() {
         goButton.isHidden = false
     }
     
+    // Zander added: hide Go Button
     func hideGoButton() {
         goButton.isHidden = true
     }
     
+    // Zander added: show Progress Bar
     func showPBar() {
         progressView.isHidden = false
     }
     
+    // Zander added: hide Progress Bar
     func hidePBar() {
         progressView.isHidden = true
     }
     
+    // Zander added: go Button pressed
     @objc func buttonPressed() {
+        // go button is pressed so we are now navigating
+        // and have a destination
+        haveDestination = true
+        // after button is pressed hide button
         hideGoButton()
+        // center view -- we may want to change the way the
+        // view is centered such that the path is always
+        // facing the top of the screen
         centerViewOnUserLocation()
+        // show progress bar
         showPBar()
         startRouteTimer()
     }
     
+    // Zander added: function that updates the progress
+    // bar by taking the distance remaining and using
+    // the destination distance to calculate
+    // progress as a percentage
     func updateProgressBar(distanceRemaining: CLLocationDistance) {
         let p = Float(destinationDistance - distanceRemaining) / Float(destinationDistance)
-        // print("progress: ", p)
         if (p > 0) {
             progressView.progress = p
         }
@@ -222,7 +245,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.view.layoutIfNeeded()
         })
     }
-        // LocationManagerDelegate methods
+  
+    // LocationManagerDelegate methods
     func didUpdateLocation(_ location: CLLocation) {
         currentLocation = location // store this location somewhere
         if (!initialized) {
@@ -233,6 +257,23 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         // print("distance remaining: ", distanceRemaining)
         // need to give distanceRemaining to progress bar
         updateProgressBar(distanceRemaining: distanceRemaining)
+        // Zander added: calculate distance remaining if
+        // we have a destination
+        if haveDestination {
+            let distanceRemaining = currentLocation.distance(from: destinationLocation)
+            if distanceRemaining < 50 { // need to fine tune
+                haveDestination = false
+                hidePBar()
+                // we have arrived, do something here
+                // perhaps lisa can add a notification
+                print("you have arrived")
+                
+            } else {
+                // Zander added: update the progress bar with the
+                // current distance remaining
+                updateProgressBar(distanceRemaining: distanceRemaining)
+            }
+        }
     }
 
     func didFailWithError(_ error: Error) {
@@ -242,8 +283,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     func didUpdateHeading(_ heading: CLHeading) {
         return
     }
-
-    let scale: CGFloat = 300
 
     private func centerViewOnUserLocation() {
         let coordinate = currentLocation.coordinate
@@ -380,8 +419,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     }
     
     func centerMapOnCoordinates(coord1: CLLocationCoordinate2D, coord2: CLLocationCoordinate2D) {
-        print("coord1: ", coord1)
-        print("coord2: ", coord2)
+        // Zander added: hide the Progress Bar and Go
+        // Button
         hidePBar()
         hideGoButton()
         
@@ -401,7 +440,14 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         camera.centerCoordinateDistance = 4.0 * distance
         camera.heading = (bearing * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
         mapView.setCamera(camera, animated: true)
+        
+        // Zander added: show Go button after map path is
+        // centered
+        //Alec: TODO change this
+        showGoButton()
     }
+    
+
 
     func createPath(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) {
         let sourcePlacemark = MKPlacemark(coordinate: source)
