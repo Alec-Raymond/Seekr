@@ -33,3 +33,7 @@ Using Google Maps is boring. Using physical maps is outdated, impractical, and s
 Registration is working, Login is almost fully set up. Need to do the last linking.
 =======
 >>>>>>> 3ae2449 (test push with README)
+
+### November 25th Updates ###
+  - Notifications work now
+  - Updated the path updating when going off course
