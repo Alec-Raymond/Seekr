@@ -4,29 +4,37 @@
 //
 //  Created by Zander Dumont on 10/29/24.
 //
-
 import UIKit
 import CoreData
 import MapKit
 import SwiftUI
 import CoreLocation
-
-
-class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDelegate, MKLocalSearchCompleterDelegate, UITableViewDataSource, UITableViewDelegate {
+class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDelegate, MKLocalSearchCompleterDelegate, UITableViewDataSource, UITableViewDelegate, LocationManagerDelegate {
+    
+    func didUpdateCompassBearing(_ bearing: CGFloat) {
+        UIView.animate(withDuration: 0.5) {
+            print(bearing)
+            self.compassImageView.transform = CGAffineTransform(rotationAngle: bearing)
+        }
+    }
+    
     
     var searchCompleter = MKLocalSearchCompleter()
-    let compassImageView = UIImageView(image: UIImage(named: "compass.png"))
+    let compassImageView = CompassImageView()
     var searchResults = [MKLocalSearchCompletion]()
     var annotationList = [MKPointAnnotation]()
     var tableView = UITableView()
     var routeOverlay: MKPolyline?
+    var oldRoute: MKPolyline?
+    var currentRoute: MKRoute?
     var userCentered = false
     let geocoder = CLGeocoder()
-    var lastLocation = CLLocation()
-    var lastHeading = CGFloat()
-    var lastBearing = CGFloat()
+    var currentLocation = CLLocation()
     var destinationLocation = CLLocation()
     var destinationDistance = CLLocationDistance()
+    var isLiveRoute = false
+    var routeTimer: Timer?
+    var initialized = false
     // Zander added: haveDestination to keep track if the
     // user is currently navigating or has not yet started
     // their route
@@ -34,24 +42,24 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     // Zander: moved scale here
     let scale: CGFloat = 300
     
-    let locationManager = CLLocationManager()
+    private let locationManager = LocationManager.shared
     lazy var mapView: MKMapView = {
         let map = MKMapView()
+        map.showsUserLocation = true
         map.translatesAutoresizingMaskIntoConstraints = false
         return map
     }()
     
-    // Zander added: Go Button
-    let button: UIButton = {
-        let button = UIButton()
-        button.setTitle("GO", for: .normal)
-        button.backgroundColor = .blue
-        button.layer.cornerRadius = 15
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.isHidden = true
-        button.addTarget(self, action: #selector(buttonPressed), for: .touchUpInside)
-        // ^ Don't listen to the warning
-        return button
+    // Go Button
+    let goButton: UIButton = {
+        let goButton = UIButton()
+        goButton.setTitle("GO", for: .normal)
+        goButton.backgroundColor = .blue
+        goButton.layer.cornerRadius = 15
+        goButton.translatesAutoresizingMaskIntoConstraints = false
+        goButton.isHidden = true
+        goButton.addTarget(self, action: #selector(buttonPressed), for: .touchUpInside)
+        return goButton
     }()
     
     // Zander added: Progress Bar
@@ -69,7 +77,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         progressView.isHidden = true
         return progressView
     }()
-
     lazy var searchTextField: UISearchBar = {
         let searchTextField = UISearchBar()
         searchTextField.layer.cornerRadius = 15
@@ -83,10 +90,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        locationManager.delegate = self
-        locationManager.requestWhenInUseAuthorization()
-        locationManager.startUpdatingHeading()
+        locationManager.addDelegate(self)
         locationManager.startUpdatingLocation()
+        locationManager.startUpdatingHeading()
         searchCompleter.delegate = self
         mapView.delegate = self
         
@@ -95,9 +101,10 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         setupUI()
         centerViewOnUserLocation()
     }
-//    override func viewDidAppear(_ animated: Bool) {
-//        centerViewOnUserLocation()
-//    }
+    
+    func startRouteTimer() {
+        routeTimer = Timer.scheduledTimer(timeInterval: 1.0, target: self, selector: #selector(recalculateRoute), userInfo: nil, repeats: true)
+    }
     
     private var searchTextFieldBottomConstraint: NSLayoutConstraint!
     private var tableViewTopConstraint: NSLayoutConstraint!
@@ -108,15 +115,19 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         view.addSubview(searchTextField)
         view.addSubview(tableView)
         view.addSubview(compassImageView)
-        view.addSubview(button)
+        view.addSubview(goButton)
         view.addSubview(progressView)
         
         // Zander added: Center Go Button and Progress Bar
         NSLayoutConstraint.activate([
-            button.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            button.topAnchor.constraint(equalTo: view.topAnchor, constant: 75),
-            button.widthAnchor.constraint(equalToConstant: 150),
-            button.heightAnchor.constraint(equalToConstant: 40),
+            goButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            goButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 75),
+            goButton.widthAnchor.constraint(equalToConstant: 150),
+            goButton.heightAnchor.constraint(equalToConstant: 40)
+        ])
+        
+        // Center Progress Bar
+        NSLayoutConstraint.activate([
             progressView.widthAnchor.constraint(equalToConstant: 300),
             progressView.heightAnchor.constraint(equalToConstant: 10),
             progressView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -158,12 +169,12 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     // Zander added: show Go Button
     func showGoButton() {
-        button.isHidden = false
+        goButton.isHidden = false
     }
     
     // Zander added: hide Go Button
     func hideGoButton() {
-        button.isHidden = true
+        goButton.isHidden = true
     }
     
     // Zander added: show Progress Bar
@@ -189,6 +200,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         centerViewOnUserLocation()
         // show progress bar
         showPBar()
+        startRouteTimer()
     }
     
     // Zander added: function that updates the progress
@@ -218,7 +230,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.view.layoutIfNeeded()
         })
     }
-
     func hideSearch() {
         UIView.animate(withDuration: 0.3, animations: {
             NSLayoutConstraint.deactivate([self.searchTextFieldBottomConstraint, self.tableViewTopConstraint])
@@ -228,16 +239,64 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.view.layoutIfNeeded()
         })
     }
+
+    //implement below function for cleaner code
+//    func checkForWrongDirection(currentDistance: CLLocationDistance, previousDistance: CLLocationDistance) {
+//        let progress = Float(destinationDistance - currentDistance) / Float(destinationDistance)
+//        //percentage of (previous distance - current distance) / destination distance
+//        //how to calculate per
+//        print(progress)
+//        if progress > 0 {
+//            // Moving closer to the destination
+//            notificationManager.ableToSchedule = true
+//            }
+//        else if currentDistance > previousDistance {
+//            // Moving farther from the destination (wrong direction)
+//            notificationManager.dispatchNotification()
+//            print("Notification: You are going in the wrong direction.")
+//            notificationManager.ableToSchedule = false // Prevent multiple notifications until going the right way
+//        }
+//
+//
+//
+//    }
     
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    /*func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let currentLocation = locations.last else { return }
         lastLocation = currentLocation
+//        Lisa:
+//        compare previousDistance to DistanceRemaining to determine if we are
+//        going the right direction
+//        let distanceRemaining = currentLocation.distance(from: destinationLocation)
+        let previousDistance = destinationDistance  //location during 1st time period*/
 
+  
+    // LocationManagerDelegate methods
+    func didUpdateLocation(_ location: CLLocation) {
+        currentLocation = location // store this location somewhere
+        if (!initialized) {
+            centerViewOnUserLocation()
+            initialized = true
+        }
         // Zander added: calculate distance remaining if
         // we have a destination
-        if haveDestination {
-            let distanceRemaining = currentLocation.distance(from: destinationLocation)
-            if distanceRemaining < 50 { // need to fine tune
+        if haveDestination {//if started the route
+            let distanceRemaining = currentLocation.distance(from: destinationLocation)//location during 2nd time period
+            updateProgressBar(distanceRemaining: distanceRemaining)
+            destinationDistance = distanceRemaining
+            /*print("progress", previousDistance-distanceRemaining)
+            let progress = Float(previousDistance - distanceRemaining) / Float(previousDistance)*100.0//should be positive for right direction, negative for wrong direction
+//            checkForWrongDirection(currentDistance: distanceRemaining, previousDistance: previousDistance)
+            print(progress)
+            if (progress < 0) {//if going wrong direction
+                notificationManager.dispatchNotification()
+                self.createPath(from: currentLocation.coordinate, to: destinationLocation.coordinate)
+                print("Warning: You're going in the wrong direction!")
+            }
+//            checkForWrongDirection(currentDistance: distanceRemaining, previousDistance: destinationDistance)
+//            if arrived
+            else if distanceRemaining < 50 { // need to fine tune
+
                 haveDestination = false
                 hidePBar()
                 // we have arrived, do something here
@@ -248,44 +307,25 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
                 // Zander added: update the progress bar with the
                 // current distance remaining
                 updateProgressBar(distanceRemaining: distanceRemaining)
-            }
+            */
         }
+    }
+  
+    func didFailWithError(_ error: Error) {
+        print("Failed to update location: \(error)")
     }
     
-    func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        self.lastHeading = CGFloat(newHeading.magneticHeading) * .pi / 180
-        UIView.animate(withDuration: 0.5) {
-            self.compassImageView.transform = CGAffineTransform(rotationAngle: self.lastBearing - self.lastHeading)
-        }
+    func didUpdateHeading(_ heading: CLHeading) {
+        return
     }
-    
-    func locationManagerShouldDisplayHeadingCalibration(_ manager: CLLocationManager) -> Bool {
-        return true
-    }
-
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        checkLocationAuthorization()
-    }
-
-    private func checkLocationAuthorization() {
-        switch locationManager.authorizationStatus {
-        case .authorizedWhenInUse, .authorizedAlways:
-            mapView.showsUserLocation = true
-            locationManager.startUpdatingLocation()
-        default:
-            locationManager.requestWhenInUseAuthorization()
-        }
-        //Lisa: changed the centerview on user location
-        centerViewOnUserLocation()
-    }
-
     private func centerViewOnUserLocation() {
-        if let coordinate = locationManager.location?.coordinate {
-            let region = MKCoordinateRegion.init(center: coordinate,
-                                                 latitudinalMeters: scale,
-                                                 longitudinalMeters: scale)
-            mapView.setRegion(region, animated: true)
-        }
+        let coordinate = currentLocation.coordinate
+        let region = MKCoordinateRegion.init(center: coordinate,
+                                             latitudinalMeters: scale,
+                                             longitudinalMeters: scale)
+        print("view centered")
+        print(currentLocation.coordinate)
+        mapView.setRegion(region, animated: true)
     }
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
@@ -295,7 +335,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         searchBar.resignFirstResponder()
     }
-
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
         let temp = completer.results.filter { !($0.subtitle.contains("Search Nearby")) && !($0.subtitle.contains("No Results Nearby")) && !$0.subtitle.isEmpty }
         searchResults = temp
@@ -313,11 +352,21 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         let searchResult = searchResults[indexPath.row]
+        print(currentLocation.coordinate)
         cell.textLabel?.text = searchResult.title
         cell.detailTextLabel?.text = searchResult.subtitle
         return cell
     }
-
+    @objc func recalculateRoute() {
+        createPath(from: currentLocation.coordinate, to: destinationLocation.coordinate ) { pathCreated in
+            if self.oldRoute != nil && pathCreated {
+                self.mapView.removeOverlay(self.oldRoute!)
+            }
+        }
+        findBearings(userLocation: currentLocation.coordinate)
+        oldRoute = routeOverlay
+    }
+    
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         hideSearch()
         //remove the selection after the row is tapped
@@ -336,16 +385,15 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
                 print("No matching location found")
                 return
             }
-            
             let coordinate = mapItem.placemark.coordinate
+            self.destinationLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+            compassImageView.compass.destinationCoordinates = destinationLocation.coordinate
             let name = mapItem.name ?? selectedResult.title
-            
             
             
             self.mapView.removeAnnotations(self.annotationList)
             self.annotationList.removeAll()
             
-
             let annotation = MKPointAnnotation()//use mkpoint to display possible locations
             annotation.coordinate = coordinate
             annotation.title = name
@@ -353,20 +401,12 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.annotationList.append(annotation)
             
             // center the map -> call centermap on coordinates
-            if let userLocation = self.locationManager.location?.coordinate {
-                self.centerMapOnCoordinates(coord1: userLocation, coord2: coordinate)
-                self.clearPath()
-                self.createPath(from: userLocation, to: coordinate)
-            }
-            
-            // clear search results
-            self.searchResults = []
-            self.tableView.reloadData()
-            // hide keyboard when not in uses
+            recalculateRoute()
+            self.centerMapOnCoordinates(coord1: currentLocation.coordinate, coord2: destinationLocation.coordinate)
             self.searchTextField.resignFirstResponder()
+            showGoButton()
         }
     }
-
     
     func convertAddressToAnnotation(name: String, address: String, camera: Bool = false, path: Bool = false) {
         geocoder.geocodeAddressString(address) { (placemarks, error) in
@@ -392,21 +432,24 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.mapView.addAnnotation(annotation)
             self.annotationList.append(annotation)
             if (camera) {
-                if let userLocation = self.locationManager.location?.coordinate {
-                    self.centerMapOnCoordinates(coord1: userLocation, coord2: coordinate)
-                }
+                self.centerMapOnCoordinates(coord1: self.currentLocation.coordinate, coord2: coordinate)
             }
             if (path) {
-                if let userLocation = self.locationManager.location?.coordinate {
-                    self.clearPath()
-                    self.createPath(from: userLocation, to: coordinate)
-                }
+                self.clearPath()
+                self.createPath(from: self.currentLocation.coordinate, to: coordinate) {_ in}
             }
         }
     }
     
+    func findBearings(userLocation: CLLocationCoordinate2D) {
+        if let currentRoute {
+            let route_points = currentRoute.steps[0].polyline.points()
+            let next_step = route_points[1]
+            compassImageView.compass.currentNextStepCoordinates = next_step.coordinate
+        }
+    }
+    
     func centerMapOnCoordinates(coord1: CLLocationCoordinate2D, coord2: CLLocationCoordinate2D) {
-        
         // Zander added: hide the Progress Bar and Go
         // Button
         hidePBar()
@@ -421,78 +464,64 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         let location1 = CLLocation(latitude: coord1.latitude, longitude: coord1.longitude)
         let location2 = CLLocation(latitude: coord2.latitude, longitude: coord2.longitude)
         let distance = location1.distance(from: location2)
-        let bearing = calculateBearing(from: coord1, to: coord2)
-        destinationLocation = CLLocation(latitude: coord2.latitude, longitude: coord2.longitude)
+        let bearing = compassImageView.compass.calculateBearing(from: coord1, to: coord2)
+        print("bearing: " ,bearing)
         destinationDistance = distance
-        //center.longitude = center.longitude + (abs(distance) / 50000)
         camera.centerCoordinate = center
         camera.centerCoordinateDistance = 4.0 * distance
-        camera.heading = bearing
-        
+        camera.heading = (bearing * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
         mapView.setCamera(camera, animated: true)
         
         // Zander added: show Go button after map path is
         // centered
+        //Alec: TODO change this
         showGoButton()
     }
-    
-    func calculateBearing(from coordinate1: CLLocationCoordinate2D, to coordinate2: CLLocationCoordinate2D) -> CLLocationDirection {
-        let deltaLongitude = coordinate2.longitude - coordinate1.longitude
-        let y = sin(deltaLongitude) * cos(coordinate2.latitude)
-        let x = cos(coordinate1.latitude) * sin(coordinate2.latitude) - sin(coordinate1.latitude) * cos(coordinate2.latitude) * cos(deltaLongitude)
-        lastBearing = atan2(y, x)
-        let compassBearing = (lastBearing * 180 / .pi + 360).truncatingRemainder(dividingBy: 360) // Normalize to 0-360
-        // print(compassBearing)
-        return compassBearing
-    }
 
-    func createPath(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) {
+    func createPath(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, completion: @escaping (Bool) -> Void) {
         let sourcePlacemark = MKPlacemark(coordinate: source)
         let destinationPlacemark = MKPlacemark(coordinate: destination)
-
         let sourceMapItem = MKMapItem(placemark: sourcePlacemark)
         let destinationMapItem = MKMapItem(placemark: destinationPlacemark)
-
         let directionsRequest = MKDirections.Request()
         directionsRequest.source = sourceMapItem
         directionsRequest.destination = destinationMapItem
-        directionsRequest.transportType = .automobile
-
+        directionsRequest.transportType = .walking
         let directions = MKDirections(request: directionsRequest)
-
+        
         directions.calculate { [weak self] (response, error) in
-            guard let self = self else { return }
+            guard let self = self else {
+                completion(false)
+                return
+            }
             guard let response = response else {
                 if let error = error {
                     print("Error: \(error.localizedDescription)")
                 }
+                completion(false)
                 return
             }
-
-            if let routeOverlay = self.routeOverlay {
-                self.mapView.removeOverlay(routeOverlay)
+            if let route = response.routes.first {
+                self.currentRoute = route
+                self.routeOverlay = self.currentRoute?.polyline
+                self.mapView.addOverlay(self.routeOverlay!, level: .aboveRoads)
+                completion(true)
+            } else {
+                completion(false)
             }
-
-            let route = response.routes[0]
-            self.routeOverlay = route.polyline
-            self.mapView.addOverlay(route.polyline, level: .aboveRoads)
-
-            var regionRect = route.polyline.boundingMapRect
-            let wPadding = regionRect.size.width * 0.25
-            let hPadding = regionRect.size.height * 0.25
-
-            regionRect.size.width += wPadding
-            regionRect.size.height += hPadding
         }
     }
 
+    
     func clearPath() {
         if let routeOverlay = routeOverlay {
             mapView.removeOverlay(routeOverlay)
         }
+        if let routeOverlay = oldRoute {
+            mapView.removeOverlay(routeOverlay)
+        }
     }
 }
-
 extension ViewController: MKMapViewDelegate {
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
         if overlay is MKPolyline {
