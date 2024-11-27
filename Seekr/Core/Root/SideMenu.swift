@@ -34,7 +34,24 @@ struct SideMenu: View {
                     isVisible = false
                 }
             })
-
+            // View Pins Button
+            NavigationLink(destination: PinsView()) { // Make sure you have created PinsView
+                HStack {
+                    Image(systemName: "mappin.circle.fill") // Using a pin icon
+                        .font(.title2)
+                        .foregroundColor(.white)
+                    Text("View Pins")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                }
+                .padding(.vertical, 10)
+            }
+            .simultaneousGesture(TapGesture().onEnded {
+                // Collapse the menu when navigation occurs
+                withAnimation {
+                    isVisible = false
+                }
+            })
             Spacer()
         }
         .padding(.top, 100)

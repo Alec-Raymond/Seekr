@@ -19,6 +19,7 @@ struct ProfileView: View {
     @State private var userData: AppUser?
     @State private var isLoading = false
     @State private var errorMessage = ""
+    @State private var showCopiedAlert = false
     
     private var initials: String {
         guard let fullname = userData?.fullname else {return ""}
@@ -58,14 +59,13 @@ struct ProfileView: View {
                                     .foregroundColor(.gray)
                             }
                         }
-
                     }
                     
                     Section("General") {
                         HStack {
                             SettingsRowView(imageName: "gear",
-                                            title: "Version",
-                                            tintColor: .accentColor)
+                                          title: "Version",
+                                          tintColor: .accentColor)
                             Spacer()
                             Text("1.0.0")
                                 .font(.subheadline)
@@ -73,16 +73,27 @@ struct ProfileView: View {
                         }
                     }
                     
+                    Section("Share") {
+                        Button {
+                            let inviteMessage = "Join me on Seekr! Download the app and start exploring: [App Store Link Here]"
+                            UIPasteboard.general.string = inviteMessage
+                            showCopiedAlert = true
+                        } label: {
+                            SettingsRowView(imageName: "square.and.arrow.up",
+                                          title: "Invite Friends",
+                                          tintColor: .accentColor)
+                        }
+                    }
+                    
                     Section("Account") {
                         Button {
                             Task{
-                                
                                 authViewModel.signOut()
                             }
                         } label: {
                             SettingsRowView(imageName: "arrow.left.circle.fill",
-                                            title: "Sign out",
-                                            tintColor: .accentColor)
+                                          title: "Sign out",
+                                          tintColor: .accentColor)
                         }
                         
                         Button {
@@ -92,8 +103,8 @@ struct ProfileView: View {
                             }
                         } label: {
                             SettingsRowView(imageName: "xmark.circle.fill",
-                                            title: "Delete account",
-                                            tintColor: .red)
+                                          title: "Delete account",
+                                          tintColor: .red)
                         }
                     }
                 }
@@ -109,14 +120,17 @@ struct ProfileView: View {
                     .foregroundColor(.red)
                     .padding(.horizontal)
             }
-
         }
-        
-            .padding()
-            .navigationTitle("Profile")
-            .task {
-                 await loadUserData()
-             }
+        .padding()
+        .navigationTitle("Profile")
+        .task {
+            await loadUserData()
+        }
+        .alert("Copied to Clipboard", isPresented: $showCopiedAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Invitation message has been copied to your clipboard")
+        }
     }
 
     private func loadUserData() async {
@@ -127,20 +141,13 @@ struct ProfileView: View {
             isLoading = false
         }
     }
+    
     private func parseInitials(from fullname: String) -> String{
-            let formatter = PersonNameComponentsFormatter()
-            if let components = formatter.personNameComponents (from: fullname) {
-                formatter.style = .abbreviated
-                return formatter.string (from: components)
-            }
-            return ""
+        let formatter = PersonNameComponentsFormatter()
+        if let components = formatter.personNameComponents(from: fullname) {
+            formatter.style = .abbreviated
+            return formatter.string(from: components)
         }
-    }
-
-
-struct ProfileView_Previews: PreviewProvider {
-    static var previews: some View {
-        ProfileView()
-            .environmentObject(AuthViewModel())
+        return ""
     }
 }
