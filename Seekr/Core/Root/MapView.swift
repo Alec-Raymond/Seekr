@@ -67,13 +67,23 @@ class MapViewController: UIViewController, MKMapViewDelegate {
     
     @objc func handleMapTap(_ gesture: UITapGestureRecognizer) {
         let point = gesture.location(in: mapView)
-        let coordinate = mapView.convert(point, toCoordinateFrom: mapView)
         
-        NotificationCenter.default.post(
-            name: NSNotification.Name("ShowPinPrompt"),
-            object: nil,
-            userInfo: ["coordinate": coordinate]
-        )
+        // First check if we tapped on an annotation
+        let tappedAnnotations = mapView.annotations.filter { annotation in
+            guard let annotationView = mapView.view(for: annotation) else { return false }
+            let annotationPoint = annotationView.convert(annotationView.bounds.center, to: mapView)
+            return abs(point.x - annotationPoint.x) < 22 && abs(point.y - annotationPoint.y) < 22
+        }
+        
+        // Only proceed with pin creation if we didn't tap an annotation
+        if tappedAnnotations.isEmpty {
+            let coordinate = mapView.convert(point, toCoordinateFrom: mapView)
+            NotificationCenter.default.post(
+                name: NSNotification.Name("ShowPinPrompt"),
+                object: nil,
+                userInfo: ["coordinate": coordinate]
+            )
+        }
     }
     
     private func centerMapOnPin(_ pin: PinAnnotation) {
@@ -252,7 +262,11 @@ struct MapView: View {
         }
     }
 }
-
+extension CGRect {
+    var center: CGPoint {
+        return CGPoint(x: self.midX, y: self.midY)
+    }
+}
 #Preview {
     MapView()
 }
