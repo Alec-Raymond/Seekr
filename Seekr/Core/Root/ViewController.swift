@@ -358,9 +358,10 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         return cell
     }
     @objc func recalculateRoute() {
-        createPath(from: currentLocation.coordinate, to: destinationLocation.coordinate)
-        if (oldRoute != nil) {
-            mapView.removeOverlay(oldRoute!)
+        createPath(from: currentLocation.coordinate, to: destinationLocation.coordinate ) { pathCreated in
+            if self.oldRoute != nil && pathCreated {
+                self.mapView.removeOverlay(self.oldRoute!)
+            }
         }
         findBearings(userLocation: currentLocation.coordinate)
         oldRoute = routeOverlay
@@ -435,7 +436,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             }
             if (path) {
                 self.clearPath()
-                self.createPath(from: self.currentLocation.coordinate, to: coordinate)
+                self.createPath(from: self.currentLocation.coordinate, to: coordinate) {_ in}
             }
         }
     }
@@ -476,8 +477,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         //Alec: TODO change this
         showGoButton()
     }
-    
-    func createPath(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) {
+
+    func createPath(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, completion: @escaping (Bool) -> Void) {
         let sourcePlacemark = MKPlacemark(coordinate: source)
         let destinationPlacemark = MKPlacemark(coordinate: destination)
         let sourceMapItem = MKMapItem(placemark: sourcePlacemark)
@@ -487,19 +488,31 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         directionsRequest.destination = destinationMapItem
         directionsRequest.transportType = .walking
         let directions = MKDirections(request: directionsRequest)
+        
         directions.calculate { [weak self] (response, error) in
-            guard let self = self else { return }
+            guard let self = self else {
+                completion(false)
+                return
+            }
             guard let response = response else {
                 if let error = error {
                     print("Error: \(error.localizedDescription)")
                 }
+                completion(false)
                 return
             }
-            self.currentRoute = response.routes[0]
-            self.routeOverlay = self.currentRoute?.polyline
-            self.mapView.addOverlay(routeOverlay!, level: .aboveRoads)
+            if let route = response.routes.first {
+                self.currentRoute = route
+                self.routeOverlay = self.currentRoute?.polyline
+                self.mapView.addOverlay(self.routeOverlay!, level: .aboveRoads)
+                completion(true)
+            } else {
+                completion(false)
+            }
         }
     }
+
+    
     func clearPath() {
         if let routeOverlay = routeOverlay {
             mapView.removeOverlay(routeOverlay)
