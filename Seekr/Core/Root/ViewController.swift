@@ -39,14 +39,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     var currentLocation = CLLocation()
     var destinationLocation = CLLocation()
     var destinationDistance = CLLocationDistance()
-    var isLiveRoute = false
     var routeTimer: Timer?
     var initialized = false
-    // Zander added: haveDestination to keep track if the
-    // user is currently navigating or has not yet started
-    // their route
     var haveDestination = false
-    // Zander: moved scale here
     let scale: CGFloat = 300
     
     private let locationManager = LocationManager.shared
@@ -235,6 +230,14 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             name: NSNotification.Name("AddPin"),
             object: nil
         )
+        
+        // Add observer for end route button
+        NotificationCenter.default.addObserver(self, selector: #selector(endRoute), name: .endRouteNotification, object: nil)
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: .endRouteNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: NSNotification.Name("AddPin"), object: nil)
     }
     
     @objc private func handleAddPin(_ notification: Notification) {
@@ -264,17 +267,13 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         // Zander added: Center Go Button and Progress Bar
         NSLayoutConstraint.activate([
             goButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            goButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 75),
+            goButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 65),
             goButton.widthAnchor.constraint(equalToConstant: 150),
-            goButton.heightAnchor.constraint(equalToConstant: 40)
-        ])
-        
-        // Center Progress Bar
-        NSLayoutConstraint.activate([
-            progressView.widthAnchor.constraint(equalToConstant: 300),
+            goButton.heightAnchor.constraint(equalToConstant: 40),
+            progressView.widthAnchor.constraint(equalToConstant: 280),
             progressView.heightAnchor.constraint(equalToConstant: 10),
             progressView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            progressView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20)
+            progressView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 2)
         ])
         
         searchTextField.heightAnchor.constraint(equalToConstant: 44).isActive = true
@@ -308,6 +307,33 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
         showSearch()
+    }
+    
+    // Zander added: function to end route
+    @objc func endRoute() {
+        if haveDestination {
+            hidePBar()
+            clearPath()
+            haveDestination = false
+        } else {
+            showNoDestinationAlert()
+        }
+    }
+    
+    // Zander added: function that makes pop up when
+    // user hits end button with no destination
+    func showNoDestinationAlert() {
+            let alert = UIAlertController(title: "Unable to End Route", message: "You are not currently navigating.", preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+            self.present(alert, animated: true, completion: nil)
+    }
+    
+    // Zander added: functions that makes pop up when you
+    // have arrived to your destination
+    func showArrivedAlert() {
+        let alert = UIAlertController(title: "You've Arrived", message: "Thank you for using Seekr to navigate!", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        self.present(alert, animated: true, completion: nil)
     }
     
     // Zander added: show Go Button
@@ -373,6 +399,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.view.layoutIfNeeded()
         })
     }
+    
     func hideSearch() {
         UIView.animate(withDuration: 0.3, animations: {
             NSLayoutConstraint.deactivate([self.searchTextFieldBottomConstraint, self.tableViewTopConstraint])
@@ -382,37 +409,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.view.layoutIfNeeded()
         })
     }
-
-    //implement below function for cleaner code
-//    func checkForWrongDirection(currentDistance: CLLocationDistance, previousDistance: CLLocationDistance) {
-//        let progress = Float(destinationDistance - currentDistance) / Float(destinationDistance)
-//        //percentage of (previous distance - current distance) / destination distance
-//        //how to calculate per
-//        print(progress)
-//        if progress > 0 {
-//            // Moving closer to the destination
-//            notificationManager.ableToSchedule = true
-//            }
-//        else if currentDistance > previousDistance {
-//            // Moving farther from the destination (wrong direction)
-//            notificationManager.dispatchNotification()
-//            print("Notification: You are going in the wrong direction.")
-//            notificationManager.ableToSchedule = false // Prevent multiple notifications until going the right way
-//        }
-//
-//
-//
-//    }
-    
-    /*func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let currentLocation = locations.last else { return }
-        lastLocation = currentLocation
-//        Lisa:
-//        compare previousDistance to DistanceRemaining to determine if we are
-//        going the right direction
-//        let distanceRemaining = currentLocation.distance(from: destinationLocation)
-        let previousDistance = destinationDistance  //location during 1st time period*/
-
   
     // LocationManagerDelegate methods
     func didUpdateLocation(_ location: CLLocation) {
@@ -423,34 +419,19 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         }
         // Zander added: calculate distance remaining if
         // we have a destination
-        if haveDestination {//if started the route
-            let distanceRemaining = currentLocation.distance(from: destinationLocation)//location during 2nd time period
-            updateProgressBar(distanceRemaining: distanceRemaining)
-            destinationDistance = distanceRemaining
-            /*print("progress", previousDistance-distanceRemaining)
-            let progress = Float(previousDistance - distanceRemaining) / Float(previousDistance)*100.0//should be positive for right direction, negative for wrong direction
-//            checkForWrongDirection(currentDistance: distanceRemaining, previousDistance: previousDistance)
-            print(progress)
-            if (progress < 0) {//if going wrong direction
-                notificationManager.dispatchNotification()
-                self.createPath(from: currentLocation.coordinate, to: destinationLocation.coordinate)
-                print("Warning: You're going in the wrong direction!")
-            }
-//            checkForWrongDirection(currentDistance: distanceRemaining, previousDistance: destinationDistance)
-//            if arrived
-            else if distanceRemaining < 50 { // need to fine tune
-
-                haveDestination = false
-                hidePBar()
-                // we have arrived, do something here
+        if haveDestination { //if started the route
+            let distanceRemaining = currentLocation.distance(from: destinationLocation)
+            print("d: ", distanceRemaining)
+            if distanceRemaining < 50 { // need to fine tune
+                // we have arrived
                 // perhaps lisa can add a notification
-                print("you have arrived")
-                
+                endRoute()
+                showArrivedAlert()
             } else {
-                // Zander added: update the progress bar with the
+                // update the progress bar with the
                 // current distance remaining
                 updateProgressBar(distanceRemaining: distanceRemaining)
-            */
+            }
         }
     }
   
@@ -665,6 +646,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         }
     }
 }
+
 extension ViewController: MKMapViewDelegate {
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
         if overlay is MKPolyline {

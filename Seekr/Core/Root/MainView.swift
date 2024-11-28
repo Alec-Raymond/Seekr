@@ -13,6 +13,7 @@ import MapKit
 
 struct MainView: View {
     @State private var isSideMenuVisible: Bool = false
+    @State private var isEndRouteMenuVisible: Bool = false
     @EnvironmentObject var authViewModel: AuthViewModel
     
     var body: some View {
@@ -41,24 +42,55 @@ struct MainView: View {
                     }
                 }
                 
-                // Toggle Button for side menu
-                Button(action: {
-                    withAnimation {
-                        isSideMenuVisible.toggle()
+                VStack(alignment: .leading, spacing: 16) {
+                    // Toggle Button for side menu
+                    Button(action: {
+                        withAnimation {
+                            isSideMenuVisible.toggle()
+                        }
+                    }) {
+                        Image(systemName: "line.horizontal.3")
+                            .font(.title)
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(width: 60, height: 60)
+                            .background(Color("DarkBlue").opacity(0.7))
+                            .clipShape(Circle())
+                            .shadow(radius: 2)
                     }
-                }) {
-                    // Styling for button icon and animation for moving with the fadein/out of the navigation bar
-                    Image(systemName: "line.horizontal.3")
-                        .font(.title)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(Color("DarkBlue").opacity(0.7))
-                        .clipShape(Circle())
-                        .shadow(radius: 2)
+                    .animation(.easeInOut(duration: 0.3), value: isSideMenuVisible)
+                    
+                    // Zander added: Button to open End Route Menu
+                    Button(action: {
+                        withAnimation {
+                            // Button only works if side menu is closed
+                            if (isSideMenuVisible == false) {
+                                isEndRouteMenuVisible.toggle()
+                            }
+                        }
+                    }) {
+                        Image(systemName: "arrowtriangle.right.fill")
+                            .font(.title)
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(width: 60, height: 60)
+                            .background(isSideMenuVisible ? Color("DarkBlue").opacity(0.7) : Color.red.opacity(0.7))
+                            .clipShape(Circle())
+                            .shadow(radius: 2)
+                    }
+                    .animation(.easeInOut(duration: 0.3), value: isEndRouteMenuVisible)
                 }
                 .padding()
-                .offset(x: isSideMenuVisible ? 220 : 0) // Adjust based on side menu width
-                .animation(.easeInOut(duration: 0.3), value: isSideMenuVisible)
+                .offset(x: isSideMenuVisible ? 220 : 0)
+                
+                // Zander added: End Route Menu
+                if isEndRouteMenuVisible {
+                    EndRouteMenu(isVisible: $isEndRouteMenuVisible)
+                        .frame(maxWidth: 200)
+                        .transition(.move(edge: .trailing))
+                        .shadow(radius: 5)
+                        .offset(y: 75)
+                }
             }
             .navigationBarHidden(true)
         }

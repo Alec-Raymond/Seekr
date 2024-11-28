@@ -10,25 +10,22 @@ import SwiftUI
 struct EndRouteMenu: View {
     @Binding var isVisible: Bool
     var body: some View {
-        VStack(alignment: .trailing, spacing: 16) {
-            Text("Options")
-                .font(.headline)
-                .padding(.bottom, 8)
-            
+        VStack() {
             Button(action: {
-                // Logic to end the route goes here
-                print("Route ended")
+                // End route
+                NotificationCenter.default.post(name: .endRouteNotification, object: nil)
+                
                 withAnimation {
                     isVisible = false
                 }
             }) {
-                Text("End Route")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.red)
-                    .cornerRadius(8)
+            Text("End Route")
+                .font(.headline)
+                .foregroundColor(.white)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.red)
+                .cornerRadius(8)
             }
             
             Button(action: {
@@ -52,9 +49,6 @@ struct EndRouteMenu: View {
     }
 }
 
-struct EndRouteMenu_Previews: PreviewProvider {
-    static var previews: some View {
-        EndRouteMenu(isVisible: .constant(true))
-            .previewLayout(.sizeThatFits)
-    }
+extension Notification.Name {
+    static let endRouteNotification = Notification.Name("endRouteNotification")
 }
