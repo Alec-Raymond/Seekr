@@ -10,6 +10,8 @@ import MapKit
 import SwiftUI
 import CoreLocation
 import Combine
+
+
 class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDelegate, MKLocalSearchCompleterDelegate, UITableViewDataSource, UITableViewDelegate, LocationManagerDelegate {
     
     func didUpdateCompassBearing(_ bearing: CGFloat) {
@@ -18,9 +20,11 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.compassImageView.transform = CGAffineTransform(rotationAngle: bearing)
         }
     }
+
     //Pins variables
     private let pinManager = PinDataManager.shared
     private var cancellables = Set<AnyCancellable>()
+
     
     var searchCompleter = MKLocalSearchCompleter()
     let compassImageView = CompassImageView()
@@ -243,6 +247,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     func startRouteTimer() {
         routeTimer = Timer.scheduledTimer(timeInterval: 1.0, target: self, selector: #selector(recalculateRoute), userInfo: nil, repeats: true)
     }
+
     
     private var searchTextFieldBottomConstraint: NSLayoutConstraint!
     private var tableViewTopConstraint: NSLayoutConstraint!

@@ -14,86 +14,85 @@
 import SwiftUI
 
 struct LoginView: View {
-    // State variables for login fields and error message
     @State private var email = ""
     @State private var password = ""
     @State private var errorMessage = ""
-
+    
     @Binding var isRegistering: Bool
     @EnvironmentObject var authViewModel: AuthViewModel
-
+    
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // Background color
-                Color.blue
-                    .ignoresSafeArea()
-                                
-                // Decorative circles
-                Circle()
-                    .scale(1.8)
-                    .foregroundColor(.white.opacity(0.15))
-                Circle()
-                    .scale(1.45)
-                    .foregroundColor(.white.opacity(0.15))
-                Circle()
-                    .scale(1.25)
-                    .foregroundColor(.white)
-                
-                VStack(spacing: 20) {
-                    // Logo image
-                    Image("Logo")
-                        .padding() //.padding(.vertical, 32)
-
-                    TextField("Email", text: $email)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .autocapitalization(.none)
-                        .keyboardType(.emailAddress)
-                        .padding(.horizontal)
-
-                    SecureField("Password", text: $password)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .padding(.horizontal)
-
-                    if !errorMessage.isEmpty {
-                        Text(errorMessage)
-                            .foregroundColor(.red)
-                            .padding(.horizontal)
-                    }
-
-                    Button(action: {
-                        Task {
-                            do {
-                                try await authViewModel.signIn(withEmail: email, password: password)
-                                // Navigation handled by ContentView
-                            } catch {
-                                errorMessage = error.localizedDescription
-                            }
-                        }
-                    }) {
-                        Text("Login")
-                            .frame(maxWidth: .infinity)
+        GeometryReader { geometry in
+            NavigationStack {
+                ZStack {
+                    Color.blue
+                        .ignoresSafeArea()
+                    
+                    // Centered circles
+                    Circle()
+                        .scale(1.8)
+                        .foregroundColor(.white.opacity(0.15))
+                    Circle()
+                        .scale(1.45)
+                        .foregroundColor(.white.opacity(0.15))
+                    Circle()
+                        .scale(1.25)
+                        .foregroundColor(.white)
+                    
+                    // Centered content
+                    VStack(spacing: 20) {
+                        Image("Logo")
                             .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
+                            .frame(maxHeight: geometry.size.height * 0.2)
+                        
+                        TextField("Email", text: $email)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .autocapitalization(.none)
+                            .keyboardType(.emailAddress)
                             .padding(.horizontal)
+                        
+                        SecureField("Password", text: $password)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .padding(.horizontal)
+                        
+                        if !errorMessage.isEmpty {
+                            Text(errorMessage)
+                                .foregroundColor(.red)
+                                .padding(.horizontal)
+                        }
+                        
+                        Button(action: {
+                            Task {
+                                do {
+                                    try await authViewModel.signIn(withEmail: email, password: password)
+                                } catch {
+                                    errorMessage = error.localizedDescription
+                                }
+                            }
+                        }) {
+                            Text("Login")
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                                .padding(.horizontal)
+                        }
+                        
+                        Button(action: {
+                            isRegistering.toggle()
+                            errorMessage = ""
+                        }) {
+                            Text("Don't have an account? Register")
+                                .foregroundColor(.blue)
+                        }
                     }
-
-                    Button(action: {
-                        isRegistering.toggle()
-                        errorMessage = ""
-                    }) {
-                        Text("Don't have an account? Register")
-                            .foregroundColor(.blue)
-                    }
+                    .padding(.vertical, 32)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .padding(.top)
-
-            Spacer()
         }
-        .padding(.top, 50)
+        .ignoresSafeArea(.keyboard)
     }
 }
 
