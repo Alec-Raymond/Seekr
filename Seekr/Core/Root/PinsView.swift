@@ -84,7 +84,12 @@ class PinDataManager: ObservableObject {
         }
     }
 }
-
+// MARK: - Model
+struct PinAnnotation: Identifiable {
+    let id = UUID()
+    var coordinate: CLLocationCoordinate2D
+    var name: String
+}
 struct LocationTypeButton: View {
     let title: String
     let isSelected: Bool

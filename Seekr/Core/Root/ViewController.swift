@@ -9,6 +9,7 @@ import CoreData
 import MapKit
 import SwiftUI
 import CoreLocation
+import Combine
 class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDelegate, MKLocalSearchCompleterDelegate, UITableViewDataSource, UITableViewDelegate, LocationManagerDelegate {
     
     func didUpdateCompassBearing(_ bearing: CGFloat) {
@@ -17,7 +18,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.compassImageView.transform = CGAffineTransform(rotationAngle: bearing)
         }
     }
-    
+    //Pins variables
+    private let pinManager = PinDataManager.shared
+    private var cancellables = Set<AnyCancellable>()
     
     var searchCompleter = MKLocalSearchCompleter()
     let compassImageView = CompassImageView()
@@ -50,6 +53,125 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         return map
     }()
     
+    //MARK: - Pin Management
+    private func setupPinManagement() {
+        // Observe pin manager changes
+        pinManager.$pins
+            .sink { [weak self] pins in
+                self?.updateMapAnnotations(pins: pins)
+            }
+            .store(in: &cancellables)
+        
+        // Observe selected pin changes
+        pinManager.$selectedPin
+            .sink { [weak self] pin in
+                if let pin = pin {
+                    self?.centerMapOnPin(pin)
+                }
+            }
+            .store(in: &cancellables)
+            
+        // Add tap gesture for pin creation
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleMapTap(_:)))
+        mapView.addGestureRecognizer(tapGesture)
+        
+        // Display existing pins
+        displayExistingPins()
+    }
+    
+    private func displayExistingPins() {
+        for pin in pinManager.pins {
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = pin.coordinate
+            annotation.title = pin.name
+            mapView.addAnnotation(annotation)
+        }
+    }
+    
+    private func updateMapAnnotations(pins: [PinAnnotation]) {
+        // Remove existing annotations except user location
+        let existingAnnotations = mapView.annotations.filter { !($0 is MKUserLocation) }
+        mapView.removeAnnotations(existingAnnotations)
+        
+        // Add new annotations
+        for pin in pins {
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = pin.coordinate
+            annotation.title = pin.name
+            mapView.addAnnotation(annotation)
+        }
+    }
+    
+    private func centerMapOnPin(_ pin: PinAnnotation) {
+        let region = MKCoordinateRegion(
+            center: pin.coordinate,
+            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+        )
+        mapView.setRegion(region, animated: true)
+        
+        if let annotation = mapView.annotations.first(where: {
+            $0.coordinate.latitude == pin.coordinate.latitude &&
+            $0.coordinate.longitude == pin.coordinate.longitude
+        }) {
+            mapView.selectAnnotation(annotation, animated: true)
+        }
+    }
+    
+    @objc private func handleMapTap(_ gesture: UITapGestureRecognizer) {
+        let point = gesture.location(in: mapView)
+        
+        // Check if we tapped on an annotation
+        let tappedAnnotations = mapView.annotations.filter { annotation in
+            guard let annotationView = mapView.view(for: annotation) else { return false }
+            let annotationPoint = annotationView.convert(annotationView.bounds.center, to: mapView)
+            return abs(point.x - annotationPoint.x) < 22 && abs(point.y - annotationPoint.y) < 22
+        }
+        
+        // Only proceed with pin creation if we didn't tap an annotation
+        if tappedAnnotations.isEmpty {
+            let coordinate = mapView.convert(point, toCoordinateFrom: mapView)
+            NotificationCenter.default.post(
+                name: NSNotification.Name("ShowPinPrompt"),
+                object: nil,
+                userInfo: ["coordinate": coordinate]
+            )
+        }
+    }
+    // MARK: - MKMapViewDelegate
+    
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        // Skip user location annotation
+        if annotation is MKUserLocation {
+            return nil
+        }
+        
+        let identifier = "PinAnnotation"
+        var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+        
+        if annotationView == nil {
+            annotationView = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+            annotationView?.canShowCallout = true
+            
+            let deleteButton = UIButton(type: .close)
+            annotationView?.rightCalloutAccessoryView = deleteButton
+        } else {
+            annotationView?.annotation = annotation
+        }
+        
+        return annotationView
+    }
+    
+    func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
+        if let annotation = view.annotation {
+            if let index = pinManager.pins.firstIndex(where: {
+                $0.coordinate.latitude == annotation.coordinate.latitude &&
+                $0.coordinate.longitude == annotation.coordinate.longitude
+            }) {
+                pinManager.removePin(at: index)
+            }
+        }
+    }
+    //MARK: Map Navigation Features
     // Go Button
     let goButton: UIButton = {
         let goButton = UIButton()
@@ -100,6 +222,22 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         tableView.dataSource = self
         setupUI()
         centerViewOnUserLocation()
+        setupPinManagement()
+        
+        // Add observer for pin addition
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAddPin(_:)),
+            name: NSNotification.Name("AddPin"),
+            object: nil
+        )
+    }
+    
+    @objc private func handleAddPin(_ notification: Notification) {
+        guard let name = notification.userInfo?["name"] as? String,
+              let coordinate = notification.userInfo?["coordinate"] as? CLLocationCoordinate2D else { return }
+        
+        pinManager.addPin(name: name, coordinate: coordinate)
     }
     
     func startRouteTimer() {
@@ -534,3 +672,8 @@ extension ViewController: MKMapViewDelegate {
     }
 }
 
+extension CGRect {
+    var center: CGPoint {
+        return CGPoint(x: self.midX, y: self.midY)
+    }
+}
