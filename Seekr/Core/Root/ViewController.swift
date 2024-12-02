@@ -12,7 +12,7 @@ import CoreLocation
 import Combine
 
 
-class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDelegate, MKLocalSearchCompleterDelegate, UITableViewDataSource, UITableViewDelegate, LocationManagerDelegate {
+class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDelegate, MKLocalSearchCompleterDelegate, UITableViewDataSource, UITableViewDelegate, LocationManagerDelegate, LandmarkManagerDelegate {
     
     func didUpdateCompassBearing(_ bearing: CGFloat) {
         UIView.animate(withDuration: 0.5) {
@@ -24,7 +24,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     //Pins variables
     private let pinManager = PinDataManager.shared
     private var cancellables = Set<AnyCancellable>()
-
+    
+    // Landmarks
+    private var landmarkManager: LandmarkManager!
     
     var searchCompleter = MKLocalSearchCompleter()
     let compassImageView = CompassImageView()
@@ -76,6 +78,44 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         
         // Display existing pins
         displayExistingPins()
+    }
+    
+    // Zander added: function that sets up predefined landmarks
+    private func setupLandmarks() {
+        let landmarks = [
+            // Landmark(name: "Temp", details: "Temp Details", coordinate: CLLocationCoordinate2D(latitude: 36.96218, longitude: -122.05296), radius: 100),
+            Landmark(name: "Santa Cruz Beach Boardwalk", details: "A classic seaside amusement park featuring rides, games, and beach access.", coordinate: CLLocationCoordinate2D(latitude: 36.9643, longitude: -122.0173), radius: 200),
+            Landmark(name: "Natural Bridges State Beach", details: "Famous for its natural arch rock formation, tide pools, and monarch butterfly sanctuary.", coordinate: CLLocationCoordinate2D(latitude: 36.9513, longitude: -122.0587), radius: 150),
+            Landmark(name: "Santa Cruz Wharf", details: "A long pier with shops, restaurants, and stunning views of the Monterey Bay.", coordinate: CLLocationCoordinate2D(latitude: 36.9612, longitude: -122.0220), radius: 150),
+            Landmark(name: "UC Santa Cruz Arboretum & Botanic Garden", details: "A peaceful garden showcasing plants from Mediterranean climates worldwide.", coordinate: CLLocationCoordinate2D(latitude: 36.9823, longitude: -122.0615), radius: 100),
+            Landmark(name: "Seymour Marine Discovery Center", details: "Marine science exhibits and breathtaking coastal views.", coordinate: CLLocationCoordinate2D(latitude: 36.9491, longitude: -122.0648), radius: 100),
+            Landmark(name: "Downtown Santa Cruz", details: "A lively area with shops, restaurants, and street performers.", coordinate: CLLocationCoordinate2D(latitude: 36.9741, longitude: -122.0308), radius: 300),
+            Landmark(name: "West Cliff Drive", details: "A scenic drive or walk along the cliffs with ocean views and surf spots.", coordinate: CLLocationCoordinate2D(latitude: 36.9514, longitude: -122.0460), radius: 500),
+            Landmark(name: "Mission Santa Cruz", details: "A historic mission established in 1791.", coordinate: CLLocationCoordinate2D(latitude: 36.9746, longitude: -122.0323), radius: 100),
+            Landmark(name: "Santa Cruz Museum of Natural History", details: "A museum showcasing local history, geology, and natural science.", coordinate: CLLocationCoordinate2D(latitude: 36.9669, longitude: -122.0179), radius: 100),
+            Landmark(name: "Neary Lagoon Park", details: "A tranquil park with walking paths and wildlife viewing opportunities.", coordinate: CLLocationCoordinate2D(latitude: 36.9665, longitude: -122.0271), radius: 150),
+        ]
+        landmarkManager.addLandmarks(landmarks)
+    }
+    
+    // LandmarkManagerDelegate method called when a user enters a landmark's proximity
+    func didEnterLandmark(_ landmark: Landmark) {
+        let alert = UIAlertController(title: "You are near a landmark!", message: "You are now near \(landmark.name)", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Dismiss", style: .default, handler: nil))
+        alert.addAction(UIAlertAction(title: "Learn more", style: .default, handler: { _ in
+            self.showLandmarkDetails(landmark)
+        }))
+        self.present(alert, animated: true, completion: nil)
+    }
+    
+    func showLandmarkDetails(_ landmark: Landmark) {
+        let detailsAlert = UIAlertController(
+            title: "About \(landmark.name)",
+            message: "\(landmark.details)",
+            preferredStyle: .alert
+        )
+        detailsAlert.addAction(UIAlertAction(title: "Close", style: .default, handler: nil))
+        self.present(detailsAlert, animated: true, completion: nil)
     }
     
     private func displayExistingPins() {
@@ -222,6 +262,11 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         setupUI()
         centerViewOnUserLocation()
         setupPinManagement()
+        
+        // Set up landmarks
+        landmarkManager = LandmarkManager()
+        landmarkManager.delegate = self
+        setupLandmarks()
         
         // Add observer for pin addition
         NotificationCenter.default.addObserver(
