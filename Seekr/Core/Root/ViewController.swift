@@ -12,7 +12,7 @@ import CoreLocation
 import Combine
 
 
-class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDelegate, MKLocalSearchCompleterDelegate, UITableViewDataSource, UITableViewDelegate, LocationManagerDelegate {
+class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDelegate, MKLocalSearchCompleterDelegate, UITableViewDataSource, UITableViewDelegate, LocationManagerDelegate, LandmarkManagerDelegate {
     
     func didUpdateCompassBearing(_ bearing: CGFloat) {
         UIView.animate(withDuration: 0.5) {
@@ -24,12 +24,15 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     //Pins variables
     private let pinManager = PinDataManager.shared
     private var cancellables = Set<AnyCancellable>()
+    
+    // Landmarks
+    private var landmarkManager: LandmarkManager!
 
-//  Lisa:  Change how precise you want it to be to detect the user going the wrong direction
+    // Lisa:  Change how precise you want it to be to detect the user going the wrong direction
     private var locationTracking = Array<Bool>(repeating: true, count: 8)
     private var currentLocationTrackingIndex = 0
     
-//    Lisa: NotificationManager
+    // Lisa: NotificationManager
     private let notificationManager = NotificationManager.shared
     
     var searchCompleter = MKLocalSearchCompleter()
@@ -45,14 +48,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     var currentLocation = CLLocation()
     var destinationLocation = CLLocation()
     var destinationDistance = CLLocationDistance()
-    var isLiveRoute = false
     var routeTimer: Timer?
     var initialized = false
-    // Zander added: haveDestination to keep track if the
-    // user is currently navigating or has not yet started
-    // their route
     var haveDestination = false
-    // Zander: moved scale here
     let scale: CGFloat = 300
     
     private let locationManager = LocationManager.shared
@@ -87,6 +85,44 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         
         // Display existing pins
         displayExistingPins()
+    }
+    
+    // Zander added: function that sets up predefined landmarks
+    private func setupLandmarks() {
+        let landmarks = [
+            // Landmark(name: "Temp", details: "Temp Details", coordinate: CLLocationCoordinate2D(latitude: 36.96218, longitude: -122.05296), radius: 100),
+            Landmark(name: "Santa Cruz Beach Boardwalk", details: "A classic seaside amusement park featuring rides, games, and beach access.", coordinate: CLLocationCoordinate2D(latitude: 36.9643, longitude: -122.0173), radius: 200),
+            Landmark(name: "Natural Bridges State Beach", details: "Famous for its natural arch rock formation, tide pools, and monarch butterfly sanctuary.", coordinate: CLLocationCoordinate2D(latitude: 36.9513, longitude: -122.0587), radius: 150),
+            Landmark(name: "Santa Cruz Wharf", details: "A long pier with shops, restaurants, and stunning views of the Monterey Bay.", coordinate: CLLocationCoordinate2D(latitude: 36.9612, longitude: -122.0220), radius: 150),
+            Landmark(name: "UC Santa Cruz Arboretum & Botanic Garden", details: "A peaceful garden showcasing plants from Mediterranean climates worldwide.", coordinate: CLLocationCoordinate2D(latitude: 36.9823, longitude: -122.0615), radius: 100),
+            Landmark(name: "Seymour Marine Discovery Center", details: "Marine science exhibits and breathtaking coastal views.", coordinate: CLLocationCoordinate2D(latitude: 36.9491, longitude: -122.0648), radius: 100),
+            Landmark(name: "Downtown Santa Cruz", details: "A lively area with shops, restaurants, and street performers.", coordinate: CLLocationCoordinate2D(latitude: 36.9741, longitude: -122.0308), radius: 300),
+            Landmark(name: "West Cliff Drive", details: "A scenic drive or walk along the cliffs with ocean views and surf spots.", coordinate: CLLocationCoordinate2D(latitude: 36.9514, longitude: -122.0460), radius: 500),
+            Landmark(name: "Mission Santa Cruz", details: "A historic mission established in 1791.", coordinate: CLLocationCoordinate2D(latitude: 36.9746, longitude: -122.0323), radius: 100),
+            Landmark(name: "Santa Cruz Museum of Natural History", details: "A museum showcasing local history, geology, and natural science.", coordinate: CLLocationCoordinate2D(latitude: 36.9669, longitude: -122.0179), radius: 100),
+            Landmark(name: "Neary Lagoon Park", details: "A tranquil park with walking paths and wildlife viewing opportunities.", coordinate: CLLocationCoordinate2D(latitude: 36.9665, longitude: -122.0271), radius: 150),
+        ]
+        landmarkManager.addLandmarks(landmarks)
+    }
+    
+    // LandmarkManagerDelegate method called when a user enters a landmark's proximity
+    func didEnterLandmark(_ landmark: Landmark) {
+        let alert = UIAlertController(title: "You are near a landmark!", message: "You are now near \(landmark.name)", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Dismiss", style: .default, handler: nil))
+        alert.addAction(UIAlertAction(title: "Learn more", style: .default, handler: { _ in
+            self.showLandmarkDetails(landmark)
+        }))
+        self.present(alert, animated: true, completion: nil)
+    }
+    
+    func showLandmarkDetails(_ landmark: Landmark) {
+        let detailsAlert = UIAlertController(
+            title: "About \(landmark.name)",
+            message: "\(landmark.details)",
+            preferredStyle: .alert
+        )
+        detailsAlert.addAction(UIAlertAction(title: "Close", style: .default, handler: nil))
+        self.present(detailsAlert, animated: true, completion: nil)
     }
     
     private func displayExistingPins() {
@@ -233,9 +269,13 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         setupUI()
         centerViewOnUserLocation()
         setupPinManagement()
-        //    Lisa added checking for permission of notifications
-//        notificationManager.checkForPermission()
-
+        
+        // Set up landmarks
+        landmarkManager = LandmarkManager()
+        landmarkManager.delegate = self
+        setupLandmarks()
+        
+        // Lisa added checking for permission of notifications
         // Add observer for pin addition
         NotificationCenter.default.addObserver(
             self,
@@ -243,6 +283,14 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             name: NSNotification.Name("AddPin"),
             object: nil
         )
+        
+        // Add observer for end route button
+        NotificationCenter.default.addObserver(self, selector: #selector(endRoute), name: .endRouteNotification, object: nil)
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: .endRouteNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: NSNotification.Name("AddPin"), object: nil)
     }
     
     @objc private func handleAddPin(_ notification: Notification) {
@@ -272,17 +320,13 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         // Zander added: Center Go Button and Progress Bar
         NSLayoutConstraint.activate([
             goButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            goButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 75),
+            goButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 65),
             goButton.widthAnchor.constraint(equalToConstant: 150),
-            goButton.heightAnchor.constraint(equalToConstant: 40)
-        ])
-        
-        // Center Progress Bar
-        NSLayoutConstraint.activate([
-            progressView.widthAnchor.constraint(equalToConstant: 300),
+            goButton.heightAnchor.constraint(equalToConstant: 40),
+            progressView.widthAnchor.constraint(equalToConstant: 280),
             progressView.heightAnchor.constraint(equalToConstant: 10),
             progressView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            progressView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20)
+            progressView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 2)
         ])
         
         searchTextField.heightAnchor.constraint(equalToConstant: 44).isActive = true
@@ -316,6 +360,33 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
         showSearch()
+    }
+    
+    // Zander added: function to end route
+    @objc func endRoute() {
+        if haveDestination {
+            hidePBar()
+            clearPath()
+            haveDestination = false
+        } else {
+            showNoDestinationAlert()
+        }
+    }
+    
+    // Zander added: function that makes pop up when
+    // user hits end button with no destination
+    func showNoDestinationAlert() {
+            let alert = UIAlertController(title: "Unable to End Route", message: "You are not currently navigating.", preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+            self.present(alert, animated: true, completion: nil)
+    }
+    
+    // Zander added: functions that makes pop up when you
+    // have arrived to your destination
+    func showArrivedAlert() {
+        let alert = UIAlertController(title: "You've Arrived", message: "Thank you for using Seekr to navigate!", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        self.present(alert, animated: true, completion: nil)
     }
     
     // Zander added: show Go Button
@@ -381,6 +452,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.view.layoutIfNeeded()
         })
     }
+    
     func hideSearch() {
         UIView.animate(withDuration: 0.3, animations: {
             NSLayoutConstraint.deactivate([self.searchTextFieldBottomConstraint, self.tableViewTopConstraint])
@@ -390,9 +462,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             self.view.layoutIfNeeded()
         })
     }
-
-  
-
   
     // LocationManagerDelegate methods
     func didUpdateLocation(_ location: CLLocation) {
@@ -401,16 +470,22 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             centerViewOnUserLocation()
             initialized = true
         }
-        
         // Zander added: calculate distance remaining if
         // we have a destination
-        if haveDestination {//if started the route
-            let distanceRemaining = currentLocation.distance(from: destinationLocation)//location during 2nd time period
-            updateProgressBar(distanceRemaining: distanceRemaining)
-            destinationDistance = distanceRemaining
+        if haveDestination {
+            let distanceRemaining = currentLocation.distance(from: destinationLocation)
+            if distanceRemaining < 40 {
+                // we have arrived
+                endRoute()
+                showArrivedAlert()
+            } else {
+                // update the progress bar with the
+                // current distance remaining
+                updateProgressBar(distanceRemaining: distanceRemaining)
+            }
         }
-//        Lisa: created a boundary to detect when  going to the wrong direction
-        //Route Overlay detection
+        // Lisa: created a boundary to detect when  going to the wrong direction
+        // Route Overlay detection
         guard let routeOverlay else { return }
         
         let isOnRoute = routeOverlay.boundingMapRect
@@ -423,18 +498,15 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         }
         
         checkIfNotificationShouldBeTriggered()
-//        keep track of last 4
+        // keep track of last 4
         currentLocationTrackingIndex = currentLocationTrackingIndex == locationTracking.count - 1 ? 0 : currentLocationTrackingIndex + 1
-        
     }
-//    Lisa: calculate if we went wrong direction long enough to send the notification
+    // Lisa: calculate if we went wrong direction long enough to send the notification
     func checkIfNotificationShouldBeTriggered() {
-//        
         if locationTracking.filter({ $0 }).isEmpty {
             notificationManager.dispatchNotification()
         } else {
             notificationManager.ableToSchedule = true
-
         }
     }
   
@@ -649,6 +721,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         }
     }
 }
+
 extension ViewController: MKMapViewDelegate {
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
         if overlay is MKPolyline {
