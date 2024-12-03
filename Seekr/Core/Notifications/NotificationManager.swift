@@ -9,16 +9,31 @@ import Foundation
 import UserNotifications
 import UIKit
 
+/// `NotificationManager` is responsible for managing and dispatching user notifications.
+/// It ensures proper handling of permissions and schedules notifications for specific events.
+///
+/// - Note: This class is a singleton, accessed through `NotificationManager.shared`.
 class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
-    static let shared = NotificationManager()
-    var ableToSchedule = true // Checks if there's a need to send a notification
-    let notificationCenter = UNUserNotificationCenter.current()
     
+    /// Shared instance of `NotificationManager` to ensure a single point of access.
+    static let shared = NotificationManager()
+    
+    /// Flag to determine if notifications can be scheduled.
+    /// Prevents duplicate notifications when one is already active.
+    var ableToSchedule = true
+
+    /// The notification center used to schedule and manage notifications.
+    private let notificationCenter = UNUserNotificationCenter.current()
+    
+    /// Initializes the `NotificationManager` and sets its delegate to handle notifications.
     override init() {
         super.init()
         self.notificationCenter.delegate = self
     }
     
+    /// Requests permission to send notifications and returns the authorization status.
+    ///
+    /// - Parameter completion: A closure that takes a `Bool` indicating whether permission was granted.
     func checkForPermission(completion: @escaping (Bool) -> Void) {
         self.notificationCenter.getNotificationSettings { settings in
             switch settings.authorizationStatus {
@@ -36,6 +51,12 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
     
+    /// Dispatches a "wrong direction" notification to the user.
+    ///
+    /// - Note: This method checks `ableToSchedule` before sending a notification to avoid duplicates.
+    /// - Notification details:
+    ///   - Title: "Wrong Direction"
+    ///   - Body: "You are currently heading in the wrong direction!"
     func dispatchNotification() {
         if !ableToSchedule {
             return
@@ -54,14 +75,28 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         
+        // Remove any pending notifications with the same identifier before scheduling a new one.
         notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
         notificationCenter.add(request)
     }
     
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    /// Handles the presentation of notifications while the app is in the foreground.
+    ///
+    /// - Parameters:
+    ///   - center: The `UNUserNotificationCenter` instance handling the notification.
+    ///   - notification: The notification being presented.
+    ///   - completionHandler: A closure specifying how the notification should be presented.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
         completionHandler([.badge, .banner, .list, .sound])
     }
     
+    /// Opens the app's notification settings in the system settings.
+    ///
+    /// - Note: This method only works if the device supports opening the settings URL.
     func openAppNotificationSettings() {
         guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
             return
@@ -71,3 +106,4 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 }
+
