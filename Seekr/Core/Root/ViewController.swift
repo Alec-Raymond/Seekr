@@ -50,6 +50,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     var destinationLocation = CLLocation()
     var destinationDistance = CLLocationDistance()
     var keepViewCenteredOnUserLocation = false
+    var viewWasCentered = false
     let toggleButton = UIButton()
     var routeTimer: Timer?
     var initialized = false
@@ -236,11 +237,15 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     @objc func toggleButtonTapped() {
         if toggleButton.backgroundColor == UIColor.blue {
             toggleButton.backgroundColor = UIColor.white
+            centerViewOnUserLocation()
             keepViewCenteredOnUserLocation = true
         } else {
             toggleButton.backgroundColor = UIColor.blue
             keepViewCenteredOnUserLocation = false
         }
+        mapView.isZoomEnabled.toggle()
+        mapView.isRotateEnabled.toggle()
+        mapView.isScrollEnabled.toggle()
     }
     
     func setupToggleButton() {
@@ -336,7 +341,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     private func setupUI() {
         let overlay = HideMapOverlay()
-        mapView.addOverlay(overlay, level: .aboveLabels)
+        //Hard Mode
+        //mapView.addOverlay(overlay, level: .aboveLabels)
         view.addSubview(mapView)
         view.addSubview(searchTextField)
         view.addSubview(tableView)
@@ -510,9 +516,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             centerViewOnUserLocation()
             initialized = true
         }
-        if (keepViewCenteredOnUserLocation) {
-            centerViewOnUserLocation()
-        }
+        
         // Zander added: calculate distance remaining if
         // we have a destination
         if haveDestination {
@@ -606,6 +610,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         }
         findBearings(userLocation: currentLocation.coordinate)
         oldRoute = routeOverlay
+        if (keepViewCenteredOnUserLocation) {
+            centerViewOnUserLocation()
+        }
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
