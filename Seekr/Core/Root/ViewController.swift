@@ -43,18 +43,21 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     var cameraHeading = CGFloat()
     var searchResults = [MKLocalSearchCompletion]()
     var annotationList = [MKPointAnnotation]()
+    @State var isHardMode = false
     var tableView = UITableView()
     var routeOverlay: MKPolyline?
     var oldRoute: MKPolyline?
     var currentRoute: MKRoute?
     var userCentered = false
     let geocoder = CLGeocoder()
+    let overlay = HideMapOverlay()
     var currentLocation = CLLocation()
     var destinationLocation = CLLocation()
     var destinationDistance = CLLocationDistance()
     var keepViewCenteredOnUserLocation = false
     var viewWasCentered = false
     let toggleButton = UIButton()
+    var innerCircle: CALayer?
     var routeTimer: Timer?
     var initialized = false
     var haveDestination = false
@@ -243,12 +246,16 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     }()
     
     @objc func toggleButtonTapped() {
-        if toggleButton.backgroundColor == UIColor.blue {
-            toggleButton.backgroundColor = UIColor.white
+        if toggleButton.layer.borderColor == UIColor.systemGray.cgColor {
+            toggleButton.layer.borderColor = UIColor.white.cgColor
+            innerCircle?.backgroundColor = UIColor.systemBlue.cgColor
+            toggleButton.layer.opacity = 1.0
             centerViewOnUserLocation()
             keepViewCenteredOnUserLocation = true
         } else {
-            toggleButton.backgroundColor = UIColor.blue
+            toggleButton.layer.borderColor = UIColor.systemGray.cgColor
+            innerCircle?.backgroundColor = UIColor.white.cgColor
+            toggleButton.layer.opacity = 0.6
             keepViewCenteredOnUserLocation = false
         }
         mapView.isZoomEnabled.toggle()
@@ -257,16 +264,44 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     }
     
     func setupToggleButton() {
-        let screenHeight = UIScreen.main.bounds.height
+        let screenHeight = UIScreen.main.bounds.height - (view.safeAreaInsets.top > 0 ? view.safeAreaInsets.top : -50)
         let buttonSize: CGFloat = 60
+        let ringWidth: CGFloat = 6
+        
+        // Set up the button frame and corner radius
         toggleButton.frame = CGRect(x: 0, y: 0, width: buttonSize, height: buttonSize)
-        toggleButton.center = CGPoint(x: 15 + buttonSize / 2, y: screenHeight / 3)
+        toggleButton.center = CGPoint(x: 15 + buttonSize / 2, y: 3 * screenHeight / 10)
         toggleButton.layer.cornerRadius = buttonSize / 2
-        toggleButton.backgroundColor = .blue
+        
+        // Set up the outer gray ring
+        toggleButton.layer.borderWidth = ringWidth
+        toggleButton.layer.borderColor = UIColor.systemGray.cgColor
+        toggleButton.backgroundColor = .clear
+        toggleButton.layer.opacity = 0.6
+        
+        // Add the blue interior circle
+        let innerCircle = CALayer()
+        let innerCircleSize = buttonSize - (2 * ringWidth)
+        innerCircle.frame = CGRect(x: ringWidth, y: ringWidth, width: innerCircleSize, height: innerCircleSize)
+        innerCircle.backgroundColor = UIColor.white.cgColor
+        innerCircle.cornerRadius = innerCircleSize / 2
+        toggleButton.layer.addSublayer(innerCircle)
+        
+        // Store a reference to the inner circle
+        self.innerCircle = innerCircle
+        
+        // Add target action
         toggleButton.addTarget(self, action: #selector(toggleButtonTapped), for: .touchUpInside)
         view.addSubview(toggleButton)
     }
     
+    // Function to change inner circle alpha value
+    func changeInnerCircleAlpha(to alpha: CGFloat) {
+        innerCircle?.opacity = Float(alpha)
+    }
+    
+
+
     // Zander added: Progress Bar
     let progressView: UIProgressView = {
         let progressView = UIProgressView()
@@ -320,7 +355,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             name: NSNotification.Name("AddPin"),
             object: nil
         )
-        
+        NotificationCenter.default.addObserver(self, selector: #selector(handleHardModeToggled(_:)), name: .hardModeToggled, object: nil)
         // Add observer for end route button
         NotificationCenter.default.addObserver(self, selector: #selector(endRoute), name: .endRouteNotification, object: nil)
     }
@@ -328,6 +363,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     deinit {
         NotificationCenter.default.removeObserver(self, name: .endRouteNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: NSNotification.Name("AddPin"), object: nil)
+        NotificationCenter.default.removeObserver(self, name: .hardModeToggled, object: nil)
     }
     
     @objc private func handleAddPin(_ notification: Notification) {
@@ -335,6 +371,17 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
               let coordinate = notification.userInfo?["coordinate"] as? CLLocationCoordinate2D else { return }
         
         pinManager.addPin(name: name, coordinate: coordinate)
+    }
+    
+    @objc private func handleHardModeToggled(_ notification: Notification) {
+        print("cool")
+        if let userInfo = notification.userInfo, let isHardMode = userInfo["isHardMode"] as? Bool {
+            if isHardMode {
+                self.mapView.addOverlay(self.overlay, level: .aboveLabels)
+            } else {
+                self.mapView.removeOverlay(self.overlay)
+            }
+        }
     }
     
     func startRouteTimer() {
@@ -347,9 +394,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     private var tableViewHeightConstraint: NSLayoutConstraint!
     
     private func setupUI() {
-        let overlay = HideMapOverlay()
+        //let overlay = HideMapOverlay()
         //Hard Mode
-        //mapView.addOverlay(overlay, level: .aboveLabels)
+        
         view.addSubview(mapView)
         view.addSubview(searchTextField)
         view.addSubview(tableView)
@@ -361,9 +408,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         // Zander added: Center Go Button and Progress Bar
         NSLayoutConstraint.activate([
             goButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            goButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 65),
-            goButton.widthAnchor.constraint(equalToConstant: 150),
-            goButton.heightAnchor.constraint(equalToConstant: 40),
+            goButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -49),
+            goButton.widthAnchor.constraint(equalToConstant: 60),
+            goButton.heightAnchor.constraint(equalToConstant: 44),
             progressView.widthAnchor.constraint(equalToConstant: 280),
             progressView.heightAnchor.constraint(equalToConstant: 10),
             progressView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -497,6 +544,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     func showSearch() {
         // Deactivate constraints
+        hideGoButton()
         UIView.animate(withDuration: 0.3, animations: {
             NSLayoutConstraint.deactivate([self.searchTextFieldBottomConstraint, self.tableViewTopConstraint, self.tableViewHeightConstraint])
             self.searchTextFieldBottomConstraint = self.searchTextField.bottomAnchor.constraint(equalTo: self.view.centerYAnchor)
@@ -507,6 +555,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     }
     
     func hideSearch() {
+        showGoButton()
         UIView.animate(withDuration: 0.3, animations: {
             NSLayoutConstraint.deactivate([self.searchTextFieldBottomConstraint, self.tableViewTopConstraint])
             self.searchTextFieldBottomConstraint = self.searchTextField.bottomAnchor.constraint(equalTo: self.view.bottomAnchor)

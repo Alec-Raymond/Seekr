@@ -32,7 +32,6 @@ class Compass: NSObject, CLLocationManagerDelegate, LocationManagerDelegate {
     }
     
     func didUpdateHeading(_ heading: CLHeading) {
-        print("dest: ", destinationCoordinates.latitude)
         self.currentHeading = CGFloat(heading.trueHeading) * .pi / 180
         var destinationBearing = calculateBearing(from: currentLocationCoordinates, to: destinationCoordinates)
         
@@ -107,7 +106,6 @@ class CompassImageView: UIView, CompassDelegate {
     
     func didUpdateCompassBearing(_ bearing: CGFloat) {
         let currentHeading = abs(bearing / .pi * 180 - 180.0)
-        print("heading: ", currentHeading)
         if (currentHeading > 160) {
             greenCompass.alpha = 1.0
             yellowCompass.alpha = 0.0
@@ -138,7 +136,6 @@ class CompassImageView: UIView, CompassDelegate {
             redCompass.alpha = 1.0
         }
         UIView.animate(withDuration: 0.5) {
-            print(bearing)
             self.greenCompass.transform = CGAffineTransform(rotationAngle: bearing)
             self.yellowCompass.transform = CGAffineTransform(rotationAngle: bearing)
             self.redCompass.transform = CGAffineTransform(rotationAngle: bearing)
