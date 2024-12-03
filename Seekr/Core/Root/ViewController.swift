@@ -25,6 +25,12 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     private let pinManager = PinDataManager.shared
     private var cancellables = Set<AnyCancellable>()
 
+//  Lisa:  Change how precise you want it to be to detect the user going the wrong direction
+    private var locationTracking = Array<Bool>(repeating: true, count: 8)
+    private var currentLocationTrackingIndex = 0
+    
+//    Lisa: NotificationManager
+    private let notificationManager = NotificationManager.shared
     
     var searchCompleter = MKLocalSearchCompleter()
     let compassImageView = CompassImageView()
@@ -227,7 +233,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         setupUI()
         centerViewOnUserLocation()
         setupPinManagement()
-        
+        //    Lisa added checking for permission of notifications
+//        notificationManager.checkForPermission()
+
         // Add observer for pin addition
         NotificationCenter.default.addObserver(
             self,
@@ -383,35 +391,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         })
     }
 
-    //implement below function for cleaner code
-//    func checkForWrongDirection(currentDistance: CLLocationDistance, previousDistance: CLLocationDistance) {
-//        let progress = Float(destinationDistance - currentDistance) / Float(destinationDistance)
-//        //percentage of (previous distance - current distance) / destination distance
-//        //how to calculate per
-//        print(progress)
-//        if progress > 0 {
-//            // Moving closer to the destination
-//            notificationManager.ableToSchedule = true
-//            }
-//        else if currentDistance > previousDistance {
-//            // Moving farther from the destination (wrong direction)
-//            notificationManager.dispatchNotification()
-//            print("Notification: You are going in the wrong direction.")
-//            notificationManager.ableToSchedule = false // Prevent multiple notifications until going the right way
-//        }
-//
-//
-//
-//    }
-    
-    /*func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let currentLocation = locations.last else { return }
-        lastLocation = currentLocation
-//        Lisa:
-//        compare previousDistance to DistanceRemaining to determine if we are
-//        going the right direction
-//        let distanceRemaining = currentLocation.distance(from: destinationLocation)
-        let previousDistance = destinationDistance  //location during 1st time period*/
+  
 
   
     // LocationManagerDelegate methods
@@ -421,36 +401,40 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             centerViewOnUserLocation()
             initialized = true
         }
+        
         // Zander added: calculate distance remaining if
         // we have a destination
         if haveDestination {//if started the route
             let distanceRemaining = currentLocation.distance(from: destinationLocation)//location during 2nd time period
             updateProgressBar(distanceRemaining: distanceRemaining)
             destinationDistance = distanceRemaining
-            /*print("progress", previousDistance-distanceRemaining)
-            let progress = Float(previousDistance - distanceRemaining) / Float(previousDistance)*100.0//should be positive for right direction, negative for wrong direction
-//            checkForWrongDirection(currentDistance: distanceRemaining, previousDistance: previousDistance)
-            print(progress)
-            if (progress < 0) {//if going wrong direction
-                notificationManager.dispatchNotification()
-                self.createPath(from: currentLocation.coordinate, to: destinationLocation.coordinate)
-                print("Warning: You're going in the wrong direction!")
-            }
-//            checkForWrongDirection(currentDistance: distanceRemaining, previousDistance: destinationDistance)
-//            if arrived
-            else if distanceRemaining < 50 { // need to fine tune
+        }
+//        Lisa: created a boundary to detect when  going to the wrong direction
+        //Route Overlay detection
+        guard let routeOverlay else { return }
+        
+        let isOnRoute = routeOverlay.boundingMapRect
+            .insetBy(dx: 10.0, dy: 10.0)
+            .contains(location: location)
+        if !isOnRoute{
+            locationTracking[currentLocationTrackingIndex] = false
+        }else {
+            locationTracking[currentLocationTrackingIndex] = true
+        }
+        
+        checkIfNotificationShouldBeTriggered()
+//        keep track of last 4
+        currentLocationTrackingIndex = currentLocationTrackingIndex == locationTracking.count - 1 ? 0 : currentLocationTrackingIndex + 1
+        
+    }
+//    Lisa: calculate if we went wrong direction long enough to send the notification
+    func checkIfNotificationShouldBeTriggered() {
+//        
+        if locationTracking.filter({ $0 }).isEmpty {
+            notificationManager.dispatchNotification()
+        } else {
+            notificationManager.ableToSchedule = true
 
-                haveDestination = false
-                hidePBar()
-                // we have arrived, do something here
-                // perhaps lisa can add a notification
-                print("you have arrived")
-                
-            } else {
-                // Zander added: update the progress bar with the
-                // current distance remaining
-                updateProgressBar(distanceRemaining: distanceRemaining)
-            */
         }
     }
   
@@ -680,5 +664,15 @@ extension ViewController: MKMapViewDelegate {
 extension CGRect {
     var center: CGPoint {
         return CGPoint(x: self.midX, y: self.midY)
+    }
+}
+
+extension MKMapRect {
+    func contains(location: CLLocation) -> Bool {
+        // Convert CLLocation to MKMapPoint
+        let mapPoint = MKMapPoint(location.coordinate)
+        
+        // Check if the map point is contained within the map rect
+        return self.contains(mapPoint)
     }
 }
