@@ -37,7 +37,7 @@ class AuthViewModel: ObservableObject {
     private let db = Firestore.firestore()
     
     init() {
-        //self.userSession = auth.currentUser // - keeps user logged in. Taya: I took this out to prompt sign in every time for testing.
+        self.userSession = auth.currentUser // - keeps user logged in. Taya: I took this out to prompt sign in every time for testing.
         Task {
             await fetchUser()
         }
