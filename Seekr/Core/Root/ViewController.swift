@@ -86,9 +86,11 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             }
             .store(in: &cancellables)
             
-        // Add tap gesture for pin creation
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleMapTap(_:)))
-        mapView.addGestureRecognizer(tapGesture)
+        // Replace tap gesture with long press gesture
+        let longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleMapLongPress(_:)))
+        // Set the minimum duration for the long press (in seconds)
+        longPressGesture.minimumPressDuration = 0.5
+        mapView.addGestureRecognizer(longPressGesture)
         
         // Display existing pins
         displayExistingPins()
@@ -170,18 +172,21 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         }
     }
     
-    @objc private func handleMapTap(_ gesture: UITapGestureRecognizer) {
+    @objc private func handleMapLongPress(_ gesture: UILongPressGestureRecognizer) {
+        // Only handle the start of the long press
+        guard gesture.state == .began else { return }
+        
         let point = gesture.location(in: mapView)
         
-        // Check if we tapped on an annotation
-        let tappedAnnotations = mapView.annotations.filter { annotation in
+        // Check if we pressed on an annotation
+        let pressedAnnotations = mapView.annotations.filter { annotation in
             guard let annotationView = mapView.view(for: annotation) else { return false }
             let annotationPoint = annotationView.convert(annotationView.bounds.center, to: mapView)
             return abs(point.x - annotationPoint.x) < 22 && abs(point.y - annotationPoint.y) < 22
         }
         
-        // Only proceed with pin creation if we didn't tap an annotation
-        if tappedAnnotations.isEmpty {
+        // Only proceed with pin creation if we didn't press on an annotation
+        if pressedAnnotations.isEmpty {
             let coordinate = mapView.convert(point, toCoordinateFrom: mapView)
             NotificationCenter.default.post(
                 name: NSNotification.Name("ShowPinPrompt"),
