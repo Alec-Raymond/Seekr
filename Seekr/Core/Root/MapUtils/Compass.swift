@@ -69,6 +69,12 @@ class Compass: NSObject, CLLocationManagerDelegate, LocationManagerDelegate {
         delegate?.didUpdateCompassBearing(newBearing)
     }
     
+    func reset() {
+        destinationCoordinates = CLLocationCoordinate2D()
+        currentNextStepCoordinates = CLLocationCoordinate2D()
+        currentLocationCoordinates = CLLocationCoordinate2D()
+    }
+    
     func didFailWithError(_ error: any Error) {
         return
     }

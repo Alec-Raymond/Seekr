@@ -37,6 +37,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     var searchCompleter = MKLocalSearchCompleter()
     let compassImageView = CompassImageView()
+    var cameraHeading = CGFloat()
     var searchResults = [MKLocalSearchCompletion]()
     var annotationList = [MKPointAnnotation]()
     var tableView = UITableView()
@@ -48,6 +49,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     var currentLocation = CLLocation()
     var destinationLocation = CLLocation()
     var destinationDistance = CLLocationDistance()
+    var keepViewCenteredOnUserLocation = false
+    let toggleButton = UIButton()
     var routeTimer: Timer?
     var initialized = false
     var haveDestination = false
@@ -230,6 +233,27 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         return goButton
     }()
     
+    @objc func toggleButtonTapped() {
+        if toggleButton.backgroundColor == UIColor.blue {
+            toggleButton.backgroundColor = UIColor.white
+            keepViewCenteredOnUserLocation = true
+        } else {
+            toggleButton.backgroundColor = UIColor.blue
+            keepViewCenteredOnUserLocation = false
+        }
+    }
+    
+    func setupToggleButton() {
+        let screenHeight = UIScreen.main.bounds.height
+        let buttonSize: CGFloat = 60
+        toggleButton.frame = CGRect(x: 0, y: 0, width: buttonSize, height: buttonSize)
+        toggleButton.center = CGPoint(x: 15 + buttonSize / 2, y: screenHeight / 3)
+        toggleButton.layer.cornerRadius = buttonSize / 2
+        toggleButton.backgroundColor = .blue
+        toggleButton.addTarget(self, action: #selector(toggleButtonTapped), for: .touchUpInside)
+        view.addSubview(toggleButton)
+    }
+    
     // Zander added: Progress Bar
     let progressView: UIProgressView = {
         let progressView = UIProgressView()
@@ -263,6 +287,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         locationManager.startUpdatingHeading()
         searchCompleter.delegate = self
         mapView.delegate = self
+        mapView.isPitchEnabled = false
         
         tableView.delegate = self // Set the delegate
         tableView.dataSource = self
@@ -301,7 +326,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     }
     
     func startRouteTimer() {
-        routeTimer = Timer.scheduledTimer(timeInterval: 1.0, target: self, selector: #selector(recalculateRoute), userInfo: nil, repeats: true)
+        routeTimer = Timer.scheduledTimer(timeInterval: 2.0, target: self, selector: #selector(recalculateRoute), userInfo: nil, repeats: true)
     }
 
     
@@ -310,12 +335,15 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     private var tableViewHeightConstraint: NSLayoutConstraint!
     
     private func setupUI() {
+        let overlay = HideMapOverlay()
+        mapView.addOverlay(overlay, level: .aboveLabels)
         view.addSubview(mapView)
         view.addSubview(searchTextField)
         view.addSubview(tableView)
         view.addSubview(compassImageView)
         view.addSubview(goButton)
         view.addSubview(progressView)
+        setupToggleButton()
         
         // Zander added: Center Go Button and Progress Bar
         NSLayoutConstraint.activate([
@@ -364,10 +392,21 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     // Zander added: function to end route
     @objc func endRoute() {
-        if haveDestination {
-            hidePBar()
+        if compassImageView.compass.destinationCoordinates.latitude != 0.0 {
+            if haveDestination {
+                hidePBar()
+                routeTimer?.invalidate()
+                haveDestination = false
+                searchTextField.isHidden = false
+            }
             clearPath()
-            haveDestination = false
+            cameraHeading = 0.0
+            compassImageView.compass.reset()
+            self.mapView.removeAnnotations(self.annotationList)
+            self.annotationList.removeAll()
+            destinationLocation = CLLocation()
+            hideGoButton()
+            centerViewOnUserLocation()
         } else {
             showNoDestinationAlert()
         }
@@ -414,6 +453,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         // go button is pressed so we are now navigating
         // and have a destination
         haveDestination = true
+        searchTextField.isHidden = true
         // after button is pressed hide button
         hideGoButton()
         // center view -- we may want to change the way the
@@ -470,6 +510,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             centerViewOnUserLocation()
             initialized = true
         }
+        if (keepViewCenteredOnUserLocation) {
+            centerViewOnUserLocation()
+        }
         // Zander added: calculate distance remaining if
         // we have a destination
         if haveDestination {
@@ -518,13 +561,12 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         return
     }
     private func centerViewOnUserLocation() {
-        let coordinate = currentLocation.coordinate
-        let region = MKCoordinateRegion.init(center: coordinate,
-                                             latitudinalMeters: scale,
-                                             longitudinalMeters: scale)
-        print("view centered")
-        print(currentLocation.coordinate)
-        mapView.setRegion(region, animated: true)
+        let camera = MKMapCamera()
+        
+        camera.centerCoordinate = currentLocation.coordinate
+        camera.centerCoordinateDistance = 2000
+        camera.heading = cameraHeading
+        mapView.setCamera(camera, animated: true)
     }
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
@@ -668,7 +710,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         destinationDistance = distance
         camera.centerCoordinate = center
         camera.centerCoordinateDistance = 4.0 * distance
-        camera.heading = (bearing * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
+        cameraHeading = (bearing * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
+        camera.heading = cameraHeading
         mapView.setCamera(camera, animated: true)
         
         // Zander added: show Go button after map path is
@@ -688,6 +731,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         directionsRequest.transportType = .walking
         let directions = MKDirections(request: directionsRequest)
         
+        
         directions.calculate { [weak self] (response, error) in
             guard let self = self else {
                 completion(false)
@@ -703,7 +747,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             if let route = response.routes.first {
                 self.currentRoute = route
                 self.routeOverlay = self.currentRoute?.polyline
-                self.mapView.addOverlay(self.routeOverlay!, level: .aboveRoads)
+                self.mapView.addOverlay(self.routeOverlay!, level: .aboveLabels)
                 completion(true)
             } else {
                 completion(false)
@@ -724,13 +768,15 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
 
 extension ViewController: MKMapViewDelegate {
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
-        if overlay is MKPolyline {
+        if overlay is HideMapOverlay {
+            return MKTileOverlayRenderer(overlay: overlay)
+        } else if overlay is MKPolyline {
             let polylineRenderer = MKPolylineRenderer(overlay: overlay)
             polylineRenderer.strokeColor = .blue
             polylineRenderer.lineWidth = 6.0
             return polylineRenderer
         }
-        return MKOverlayRenderer(overlay: overlay)
+        return MKOverlayRenderer()
     }
 }
 
