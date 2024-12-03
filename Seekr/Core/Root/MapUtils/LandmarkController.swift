@@ -46,7 +46,7 @@ class LandmarkManager: NSObject, LocationManagerDelegate {
         for (index, landmark) in landmarks.enumerated() {
             let landmarkLocation = CLLocation(latitude: landmark.coordinate.latitude, longitude: landmark.coordinate.longitude)
             let distance = location.distance(from: landmarkLocation)
-            print("distance to landmark:", distance)
+//            print("distance to landmark:", distance)
             
             // If within proximity, notify the delegate and mark as found
             if distance <= landmark.radius && !landmark.isFound {

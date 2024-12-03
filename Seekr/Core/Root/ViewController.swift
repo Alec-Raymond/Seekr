@@ -28,11 +28,14 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     // Landmarks
     private var landmarkManager: LandmarkManager!
 
-    // Lisa:  Change how precise you want it to be to detect the user going the wrong direction
+    ///`Constants`
+//    private let numOfWrongPings = 8
+    
+    /// Lisa:  Change `precision` of going off route
     private var locationTracking = Array<Bool>(repeating: true, count: 8)
     private var currentLocationTrackingIndex = 0
     
-    // Lisa: NotificationManager
+    /// Lisa: `NotificationManager` definition
     private let notificationManager = NotificationManager.shared
     
     var searchCompleter = MKLocalSearchCompleter()
@@ -305,7 +308,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         landmarkManager.delegate = self
         setupLandmarks()
         
-        // Lisa added checking for permission of notifications
         // Add observer for pin addition
         NotificationCenter.default.addObserver(
             self,
@@ -530,25 +532,37 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
                 // current distance remaining
                 updateProgressBar(distanceRemaining: distanceRemaining)
             }
+            checkIfFollowingRoute(location: location)
         }
-        // Lisa: created a boundary to detect when  going to the wrong direction
-        // Route Overlay detection
+    }
+    /// Lisa: Creates a boundary to detect when  going to the wrong direction
+    func checkIfFollowingRoute(location : CLLocation) {
+        /// `Route Overlay` detection
         guard let routeOverlay else { return }
         
         let isOnRoute = routeOverlay.boundingMapRect
-            .insetBy(dx: 10.0, dy: 10.0)
+            .insetBy(dx: 20.0, dy: 20.0)
             .contains(location: location)
-        if !isOnRoute{
-            locationTracking[currentLocationTrackingIndex] = false
-        }else {
+        
+        if !isMoving(location: location) || isOnRoute {
             locationTracking[currentLocationTrackingIndex] = true
+        }else {
+            locationTracking[currentLocationTrackingIndex] = false
         }
         
         checkIfNotificationShouldBeTriggered()
-        // keep track of last 4
+        // keep track of last n values
         currentLocationTrackingIndex = currentLocationTrackingIndex == locationTracking.count - 1 ? 0 : currentLocationTrackingIndex + 1
     }
-    // Lisa: calculate if we went wrong direction long enough to send the notification
+    /// Lisa: Calculates if the functions is moving
+    func isMoving(location : CLLocation) -> Bool
+    {
+        if(location.speed > 0) {
+            return true
+        }
+        return false
+    }
+    /// Lisa: Calculates if we went wrong direction long enough to send the notification
     func checkIfNotificationShouldBeTriggered() {
         if locationTracking.filter({ $0 }).isEmpty {
             notificationManager.dispatchNotification()
