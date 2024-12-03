@@ -16,10 +16,15 @@ import SwiftUI
 struct ContentView: View {
     // AuthViewModel object used to track if a user is logged in via its private state userSession. If the user has an active session, the main home page is rendered. If not, the authenticationView() is rendered, which contains the LOGIN and REGISTRATION pages
     @EnvironmentObject var authViewModel: AuthViewModel
+    @State private var notificationsAllowed = true // Tracks notification permission status
 
     var body: some View {
         Group {
-            if authViewModel.userSession != nil {
+            if !notificationsAllowed {
+                // Navigate to NotificationSettingsView if notifications are not allowed
+                
+                NotificationSettingsView(onPermissionChange: checkNotificationPermission)
+            } else if authViewModel.userSession != nil {
                 //Home page View
                 MainView()
             } else {
@@ -32,6 +37,15 @@ struct ContentView: View {
         .onAppear {
             Task {
                 await authViewModel.fetchUser()
+                checkNotificationPermission()
+
+            }
+        }
+    }
+    private func checkNotificationPermission() {
+        NotificationManager.shared.checkForPermission { allowed in
+            DispatchQueue.main.async {
+                self.notificationsAllowed = allowed
             }
         }
     }

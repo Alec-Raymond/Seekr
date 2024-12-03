@@ -27,6 +27,13 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     // Landmarks
     private var landmarkManager: LandmarkManager!
+
+    // Lisa:  Change how precise you want it to be to detect the user going the wrong direction
+    private var locationTracking = Array<Bool>(repeating: true, count: 8)
+    private var currentLocationTrackingIndex = 0
+    
+    // Lisa: NotificationManager
+    private let notificationManager = NotificationManager.shared
     
     var searchCompleter = MKLocalSearchCompleter()
     let compassImageView = CompassImageView()
@@ -268,6 +275,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         landmarkManager.delegate = self
         setupLandmarks()
         
+        // Lisa added checking for permission of notifications
         // Add observer for pin addition
         NotificationCenter.default.addObserver(
             self,
@@ -464,12 +472,10 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         }
         // Zander added: calculate distance remaining if
         // we have a destination
-        if haveDestination { //if started the route
+        if haveDestination {
             let distanceRemaining = currentLocation.distance(from: destinationLocation)
-            print("d: ", distanceRemaining)
-            if distanceRemaining < 50 { // need to fine tune
+            if distanceRemaining < 40 {
                 // we have arrived
-                // perhaps lisa can add a notification
                 endRoute()
                 showArrivedAlert()
             } else {
@@ -477,6 +483,30 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
                 // current distance remaining
                 updateProgressBar(distanceRemaining: distanceRemaining)
             }
+        }
+        // Lisa: created a boundary to detect when  going to the wrong direction
+        // Route Overlay detection
+        guard let routeOverlay else { return }
+        
+        let isOnRoute = routeOverlay.boundingMapRect
+            .insetBy(dx: 10.0, dy: 10.0)
+            .contains(location: location)
+        if !isOnRoute{
+            locationTracking[currentLocationTrackingIndex] = false
+        }else {
+            locationTracking[currentLocationTrackingIndex] = true
+        }
+        
+        checkIfNotificationShouldBeTriggered()
+        // keep track of last 4
+        currentLocationTrackingIndex = currentLocationTrackingIndex == locationTracking.count - 1 ? 0 : currentLocationTrackingIndex + 1
+    }
+    // Lisa: calculate if we went wrong direction long enough to send the notification
+    func checkIfNotificationShouldBeTriggered() {
+        if locationTracking.filter({ $0 }).isEmpty {
+            notificationManager.dispatchNotification()
+        } else {
+            notificationManager.ableToSchedule = true
         }
     }
   
@@ -707,5 +737,15 @@ extension ViewController: MKMapViewDelegate {
 extension CGRect {
     var center: CGPoint {
         return CGPoint(x: self.midX, y: self.midY)
+    }
+}
+
+extension MKMapRect {
+    func contains(location: CLLocation) -> Bool {
+        // Convert CLLocation to MKMapPoint
+        let mapPoint = MKMapPoint(location.coordinate)
+        
+        // Check if the map point is contained within the map rect
+        return self.contains(mapPoint)
     }
 }
