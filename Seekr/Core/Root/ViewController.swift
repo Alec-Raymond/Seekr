@@ -224,7 +224,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
         if let annotation = view.annotation {
-            if let index = pinManager.pins.firstIndex(where: {
+                if let index = pinManager.pins.firstIndex(where: {
                 $0.coordinate.latitude == annotation.coordinate.latitude &&
                 $0.coordinate.longitude == annotation.coordinate.longitude
             }) {
@@ -441,7 +441,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         
         compassImageView.translatesAutoresizingMaskIntoConstraints = false
         compassImageView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 30).isActive = true
-        compassImageView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16).isActive = true
+        compassImageView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -5).isActive = true
         compassImageView.widthAnchor.constraint(equalToConstant: 200).isActive = true
         compassImageView.heightAnchor.constraint(equalToConstant: 200).isActive = true
     }
