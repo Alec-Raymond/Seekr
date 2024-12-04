@@ -1,39 +1,101 @@
-## Seekr
+# **Seekr App**
 
-Using Google Maps is boring. Using physical maps is outdated, impractical, and somewhat frustrating. This IOS app offers an option in the middle, with features that retain the fun of exploration while walking or biking around a place you don't know, while preventing you from getting lost and keeping you generally headed towards your destination.
+## **Table of Contents**
+1. [Introduction](#introduction)
+2. [Installation](#installation)
+3. [Usage](#usage)
+4. [Architecture](#architecture)
+5. [Permissions](#permissions)
+6. [Contributions](#features-and-contributions)
+
+---
+
+## **1. Introduction**
+- **What is Seekr?**
+  - A mobile app designed to enhance exploration while walking or biking.
+  - Features advanced map functionalities, notifications, and user-friendly navigation tools.
+- **Purpose**
+  - To provide users with seamless navigation and exploration experiences.
+
+---
+
+## **2. Installation**
+
+### Dependencies
+
+**Firebase and Google Services**
+- Firebase (11.4.0)
+- AppCheck (11.1.0)
+- GoogleAppMeasurement (11.4.0)
+- GoogleDataTransport (10.1.0)
+- GoogleUtilities (8.0.2)
+- InteropForGoogle (100.0.0)
+- GTMSessionFetcher (3.5.0)
+
+**Networking and Data**
+- gRPC (1.65.1)
+- SwiftProtobuf (1.28.2)
+- Promises (2.4.0)
+- abseil (1.2024011602.0)
+
+ **Database and Storage**
+- leveldb (1.22.5)
+- nanopb (2.30910.0)
+
+---
+
+## **3. Usage**
+### Where to find the app
+- Find and Download on Apple Store.
+### Ways to use the app
+  - **Login/Registration**:
+    - Create an account or log in to access app.
+  - **Main Navigation**:
+    - Access the interactive map to start your journey and explore.
+  - **Add Pins**:
+    - Add pins to remember fun places you have been to.
+  - **Hard Mode**:
+     - Are you an experienced traveler? Turn off the map and try to find your way to your destination without visual help.
+  - **Friend Invite Link (Prototype)**:
+      - Invite your friends to use the app together.
+    
+## **4. Architecture**
+  - Firebase
+  - Swift
+  - XCode
+  - MapKit
+  - UIKit
 
 
-### Sprint 1 Features
-- User Profile
-- [Mapkit](https://developer.apple.com/documentation/mapkit/) Integration (Destination from Address)
-- User Orientation and Location with [CoreLocation](https://developer.apple.com/documentation/corelocation/)
-- Login and Authentication
-- Invite link
+## **5. Permissions**
+  - The app requires Location and Notifications permissions in order to function properly
+---
 
+## **6. Contributions**
+### Login and Registration
 
+  - UI Design: Taya, Ryan
+### Pin Functionality
+  -Create, Destroy, Find Pins (UCSC locations, bathrooms, coffee shops): Taya, Aidan
+  -Added Additional Locations: Zander
+### Profile
 
+  - Profile Page + UI: Aidan
+### Social Features
 
+  - Invite Friends Link Prototype: Aidan
+### Notifications
 
-<<<<<<< HEAD
+  - Notification Scheduling and Sending: Lisa
+  - Notification Permission Handling: Lisa
+### Navigation
 
-=======
->>>>>>> 3ae2449 (test push with README)
-### October 18th Updates ###
+  - Navigation Functionality: Lisa and Alec
+  -Wrong Direction Detection: Lisa
+### Gameplay Enhancements
 
-- Hey guys :) I added some new folders for organization. Here are the paths for accessing things:
+  - Hard Mode Toggle: Alec
 
-- Login page:                           Seekr/Core/Authentication/View/LoginView
-- Register new user page:               Seekr/Core/Authentication/View/RegistrationView
-- User profile page:                    Seekr/Core/Profile/ProfileView
-- User formatting page:                 Seekr/Model/User
-- Text Field shortcut:                  Seekr/Components/InputView
-- Settings Field shortcut:              Seekr/Components/SettingsRowView
-<<<<<<< HEAD
+### Map Features
 
-Registration is working, Login is almost fully set up. Need to do the last linking.
-=======
->>>>>>> 3ae2449 (test push with README)
-
-### November 25th Updates ###
-  - Notifications work now
-  - Updated the path updating when going off course
+  - Basic Map: Lisa and Alec
