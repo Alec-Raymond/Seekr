@@ -75,23 +75,33 @@
 ### Login and Registration
 
   - UI Design: Taya, Ryan
+
 ### Pin Functionality
-  -Create, Destroy, Find Pins (UCSC locations, bathrooms, coffee shops): Taya, Aidan
-  -Added Additional Locations: Zander
+  - Create, Destroy, Find Pins (UCSC locations, bathrooms, coffee shops): Taya, Aidan
+
+### Landmarks
+  - Find 10 hidden landmarks around the Santa Cruz Area by exploring the map: Zander
+
 ### Profile
 
   - Profile Page + UI: Aidan
+
 ### Social Features
 
   - Invite Friends Link Prototype: Aidan
+
 ### Notifications
 
   - Notification Scheduling and Sending: Lisa
   - Notification Permission Handling: Lisa
+
 ### Navigation
 
   - Navigation Functionality: Lisa and Alec
-  -Wrong Direction Detection: Lisa
+  - Wrong Direction Detection: Lisa
+  - Start and end route functionality: Zander
+  - Visual Progress Bar: Zander
+
 ### Gameplay Enhancements
 
   - Hard Mode Toggle: Alec
