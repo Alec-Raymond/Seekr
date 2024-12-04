@@ -75,6 +75,7 @@
 ### Login and Registration
 
   - UI Design: Taya, Ryan
+  - Firebase functions for creating and logging in users: Ryan, Taya
 
 ### Pin Functionality
   - Create, Destroy, Find Pins (UCSC locations, bathrooms, coffee shops): Taya, Aidan
@@ -85,10 +86,15 @@
 ### Profile
 
   - Profile Page + UI: Aidan
+  - Firebase routes to delete or sign out of profiles: Ryan
 
 ### Social Features
 
   - Invite Friends Link Prototype: Aidan
+
+### Application Accesability
+
+  - Home page overlay menu to access other pages (Invite friends, profile, etc...): Ryan
 
 ### Notifications
 
