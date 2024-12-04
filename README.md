@@ -103,10 +103,12 @@
 
 ### Navigation
 
-  - Navigation Functionality: Lisa and Alec
+  - Navigation Functionality: Alec
+  - Path to Desination: Alec
   - Wrong Direction Detection: Lisa
   - Start and end route functionality: Zander
   - Visual Progress Bar: Zander
+  - Compass: Alec
 
 ### Gameplay Enhancements
 
@@ -115,3 +117,4 @@
 ### Map Features
 
   - Basic Map: Lisa and Alec
+  - Camera: Alec
