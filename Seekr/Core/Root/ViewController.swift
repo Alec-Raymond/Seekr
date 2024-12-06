@@ -677,6 +677,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             }
         }
         findBearings(userLocation: currentLocation.coordinate)
+        if oldRoute != routeOverlay && oldRoute != nil{
+            self.mapView.removeOverlay(self.oldRoute!)
+        }
         oldRoute = routeOverlay
         if (keepViewCenteredOnUserLocation) {
             centerViewOnUserLocation()
