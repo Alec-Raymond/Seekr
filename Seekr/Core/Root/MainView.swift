@@ -25,7 +25,7 @@ struct MainView: View {
                 
                 // Overlay with toggle button and side menu
                 HStack(spacing: 0) {
-                    // Side Menu
+                    // Side Menu overlay that expands/hides with button press
                     SideMenu(isVisible: $isSideMenuVisible)
                         .offset(x: isSideMenuVisible ? 0 : -250) // Adjust based on side menu width
                         .animation(.easeInOut(duration: 0.3), value: isSideMenuVisible)

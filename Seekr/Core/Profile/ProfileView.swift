@@ -12,6 +12,8 @@
 
 // Please comment the changes you make and leave your name.
 
+// Ryan: Integrated new account signout and deletion functions
+
 import SwiftUI
 
 struct ProfileView: View {
@@ -73,6 +75,7 @@ struct ProfileView: View {
                         }
                     }
                     
+                    // Share link feature, allows for users to invite their friends to promote app community growth
                     Section("Share") {
                         Button {
                             let inviteMessage = "Join me on Seekr! Download the app and start exploring: [App Store Link Here]"
@@ -85,6 +88,7 @@ struct ProfileView: View {
                         }
                     }
                     
+                    // Account Sign Out and Deletion buttons (routes imported from AuthViewModel)
                     Section("Account") {
                         Button {
                             Task{
@@ -109,6 +113,8 @@ struct ProfileView: View {
                     }
                 }
             }
+            // This else case is only reachable if a user somehow is not logged in or has incomplete/corrupted account data in the DB
+            // In the event of this, cached data should be wiped to reset the session
             else {
                 Text("No user data available.")
                     .foregroundColor(.gray)
@@ -133,6 +139,7 @@ struct ProfileView: View {
         }
     }
 
+    //Fetch user data to be used to populate that user's profile page
     private func loadUserData() async {
         Task {
             isLoading = true
@@ -142,6 +149,7 @@ struct ProfileView: View {
         }
     }
     
+    // Strip the initials from the user's name to format to be displayed
     private func parseInitials(from fullname: String) -> String{
         let formatter = PersonNameComponentsFormatter()
         if let components = formatter.personNameComponents(from: fullname) {
