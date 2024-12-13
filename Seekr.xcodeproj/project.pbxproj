@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A43B2DE92D0C078F00D813A3 /* WrongDirectionDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A43B2DE82D0C078F00D813A3 /* WrongDirectionDetector.swift */; };
 		A48E1ABC2CF6999300BED935 /* FirebaseAnalyticsOnDeviceConversion in Frameworks */ = {isa = PBXBuildFile; productRef = 11D0313D2CD946A40086753F /* FirebaseAnalyticsOnDeviceConversion */; };
 		A48E1ABD2CF6999300BED935 /* FirebaseAnalyticsWithoutAdIdSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 11D0313F2CD946A40086753F /* FirebaseAnalyticsWithoutAdIdSupport */; };
 		A48E1ABE2CF6999300BED935 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = 11D031412CD946A40086753F /* FirebaseAppCheck */; };
@@ -52,7 +51,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		A43B2DE82D0C078F00D813A3 /* WrongDirectionDetector.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WrongDirectionDetector.swift; sourceTree = "<group>"; };
 		A4BC90CC2CAF0F3200C60ED1 /* Seekr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Seekr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A4BC90E12CAF0F3300C60ED1 /* SeekrTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SeekrTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A4BC90EB2CAF0F3300C60ED1 /* SeekrUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SeekrUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -135,7 +133,6 @@
 		A4BC90C32CAF0F3200C60ED1 = {
 			isa = PBXGroup;
 			children = (
-				A43B2DE82D0C078F00D813A3 /* WrongDirectionDetector.swift */,
 				A4BC90FE2CAF0FC600C60ED1 /* README.md */,
 				A4BC90CE2CAF0F3200C60ED1 /* Seekr */,
 				A4BC90E42CAF0F3300C60ED1 /* SeekrTests */,
@@ -326,7 +323,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A43B2DE92D0C078F00D813A3 /* WrongDirectionDetector.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
