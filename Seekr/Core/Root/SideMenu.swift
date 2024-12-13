@@ -16,6 +16,7 @@ struct SideMenu: View {
             // Profile Button (leads to Profile View)
             NavigationLink(destination: ProfileView()) {
                 HStack {
+                    // User icon to complement theme/text for profile page
                     Image(systemName: "person.circle.fill")
                         .font(.title2)
                         .foregroundColor(.white)
@@ -25,6 +26,8 @@ struct SideMenu: View {
                 }
                 .padding(.vertical, 10)
             }
+            // To ensure a consistent view when returning to the home page, the state that controls if the side menu is open
+            // is reset to be closed upon visiting another page from this nav bar
             .simultaneousGesture(TapGesture().onEnded {
                 // Collapse the menu when navigation occurs
                 withAnimation {
@@ -32,8 +35,8 @@ struct SideMenu: View {
                 }
             })
 
-            // View Pins Button
-            NavigationLink(destination: PinsView()) { // Make sure you have created PinsView
+            // Pins Button (leads to Pins View)
+            NavigationLink(destination: PinsView()) {
                 HStack {
                     Image(systemName: "mappin.circle.fill") // Using a pin icon
                         .font(.title2)
@@ -44,6 +47,8 @@ struct SideMenu: View {
                 }
                 .padding(.vertical, 10)
             }
+            // To ensure a consistent view when returning to the home page, the state that controls if the side menu is open
+            // is reset to be closed upon visiting another page from this nav bar
             .simultaneousGesture(TapGesture().onEnded {
                 // Collapse the menu when navigation occurs
                 withAnimation {
