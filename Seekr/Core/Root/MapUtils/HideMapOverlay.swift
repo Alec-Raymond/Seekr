@@ -7,6 +7,7 @@
 
 import MapKit
 
+// Creates the black overlay to hide the map
 class HideMapOverlay: MKTileOverlay {
     override func loadTile(at path: MKTileOverlayPath, result: @escaping (Data?, Error?) -> Void) {
         let tileSize = CGSize(width: 256, height: 256)

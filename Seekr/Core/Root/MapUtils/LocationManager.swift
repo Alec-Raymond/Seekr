@@ -1,3 +1,10 @@
+//
+//  SeekrApp.swift
+//  Seekr
+//
+//  Created by Alec Raymond on 10/20/24.
+//
+
 import Foundation
 import CoreLocation
 
@@ -7,6 +14,7 @@ protocol LocationManagerDelegate: AnyObject {
     func didFailWithError(_ error: Error)
 }
 
+// Defines Location Manager to handle the CLLLocationManager
 class LocationManager: NSObject, CLLocationManagerDelegate {
     static let shared = LocationManager()
     private let locationManager = CLLocationManager()

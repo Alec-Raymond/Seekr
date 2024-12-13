@@ -35,32 +35,40 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     /// Lisa: `NotificationManager` definition
     private let notificationManager = NotificationManager.shared
     
-    var searchCompleter = MKLocalSearchCompleter()
+    // Compass
     let compassImageView = CompassImageView()
-    var cameraHeading = CGFloat()
-    var searchResults = [MKLocalSearchCompletion]()
-    var annotationList = [MKPointAnnotation]()
-    @State var isHardMode = false
+    
+    
+    // Alec: Address Search
     var tableView = UITableView()
+    var searchCompleter = MKLocalSearchCompleter()
+    var searchResults = [MKLocalSearchCompletion]()
+    
+    // Alec: Route Overlay
+    var annotationList = [MKPointAnnotation]()
     var routeOverlay: MKPolyline?
     var oldRoute: MKPolyline?
     var currentRoute: MKRoute?
-    var userCentered = false
-    let geocoder = CLGeocoder()
+    var routeTimer: Timer?
+    
+    // Alec: Hard Mode
+    @State var isHardMode = false
     let overlay = HideMapOverlay()
+    
+    // Alec: Map Camera
+    let toggleCameraButton = UIButton()
+    var innerCircle: CALayer?
+    var cameraHeading = CGFloat()
+    var keepViewCenteredOnUserLocation = false
+    
+    // Alec: Location Data
+    private let locationManager = LocationManager.shared
     var currentLocation = CLLocation()
     var destinationLocation = CLLocation()
     var destinationDistance = CLLocationDistance()
-    var keepViewCenteredOnUserLocation = false
-    var viewWasCentered = false
-    let toggleButton = UIButton()
-    var innerCircle: CALayer?
-    var routeTimer: Timer?
-    var initialized = false
     var haveDestination = false
-    let scale: CGFloat = 300
     
-    private let locationManager = LocationManager.shared
+    var mapIsInitialized = false
     lazy var mapView: MKMapView = {
         let map = MKMapView()
         map.showsUserLocation = true
@@ -195,8 +203,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             )
         }
     }
-    // MARK: - MKMapViewDelegate
     
+    // MARK: - MKMapViewDelegate
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
         // Skip user location annotation
         if annotation is MKUserLocation {
@@ -242,17 +250,18 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         return goButton
     }()
     
-    @objc func toggleButtonTapped() {
-        if toggleButton.layer.borderColor == UIColor.systemGray.cgColor {
-            toggleButton.layer.borderColor = UIColor.white.cgColor
+    // Camera Button Functionality
+    @objc func toggleCameraButtonTapped() {
+        if toggleCameraButton.layer.borderColor == UIColor.systemGray.cgColor {
+            toggleCameraButton.layer.borderColor = UIColor.white.cgColor
             innerCircle?.backgroundColor = UIColor.systemBlue.cgColor
-            toggleButton.layer.opacity = 1.0
+            toggleCameraButton.layer.opacity = 1.0
             centerViewOnUserLocation()
             keepViewCenteredOnUserLocation = true
         } else {
-            toggleButton.layer.borderColor = UIColor.systemGray.cgColor
+            toggleCameraButton.layer.borderColor = UIColor.systemGray.cgColor
             innerCircle?.backgroundColor = UIColor.white.cgColor
-            toggleButton.layer.opacity = 0.6
+            toggleCameraButton.layer.opacity = 0.6
             keepViewCenteredOnUserLocation = false
         }
         mapView.isZoomEnabled.toggle()
@@ -260,21 +269,22 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         mapView.isScrollEnabled.toggle()
     }
     
-    func setupToggleButton() {
+    // Alec: Sets up fancy camera button with two colors
+    func setuptoggleCameraButton() {
         let screenHeight = UIScreen.main.bounds.height - (view.safeAreaInsets.top > 0 ? view.safeAreaInsets.top : -50)
         let buttonSize: CGFloat = 60
         let ringWidth: CGFloat = 6
         
         // Set up the button frame and corner radius
-        toggleButton.frame = CGRect(x: 0, y: 0, width: buttonSize, height: buttonSize)
-        toggleButton.center = CGPoint(x: 15 + buttonSize / 2, y: 3 * screenHeight / 10)
-        toggleButton.layer.cornerRadius = buttonSize / 2
+        toggleCameraButton.frame = CGRect(x: 0, y: 0, width: buttonSize, height: buttonSize)
+        toggleCameraButton.center = CGPoint(x: 15 + buttonSize / 2, y: 3 * screenHeight / 10)
+        toggleCameraButton.layer.cornerRadius = buttonSize / 2
         
         // Set up the outer gray ring
-        toggleButton.layer.borderWidth = ringWidth
-        toggleButton.layer.borderColor = UIColor.systemGray.cgColor
-        toggleButton.backgroundColor = .clear
-        toggleButton.layer.opacity = 0.6
+        toggleCameraButton.layer.borderWidth = ringWidth
+        toggleCameraButton.layer.borderColor = UIColor.systemGray.cgColor
+        toggleCameraButton.backgroundColor = .clear
+        toggleCameraButton.layer.opacity = 0.6
         
         // Add the blue interior circle
         let innerCircle = CALayer()
@@ -282,22 +292,15 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         innerCircle.frame = CGRect(x: ringWidth, y: ringWidth, width: innerCircleSize, height: innerCircleSize)
         innerCircle.backgroundColor = UIColor.white.cgColor
         innerCircle.cornerRadius = innerCircleSize / 2
-        toggleButton.layer.addSublayer(innerCircle)
+        toggleCameraButton.layer.addSublayer(innerCircle)
         
         // Store a reference to the inner circle
         self.innerCircle = innerCircle
         
         // Add target action
-        toggleButton.addTarget(self, action: #selector(toggleButtonTapped), for: .touchUpInside)
-        view.addSubview(toggleButton)
+        toggleCameraButton.addTarget(self, action: #selector(toggleCameraButtonTapped), for: .touchUpInside)
+        view.addSubview(toggleCameraButton)
     }
-    
-    // Function to change inner circle alpha value
-    func changeInnerCircleAlpha(to alpha: CGFloat) {
-        innerCircle?.opacity = Float(alpha)
-    }
-    
-
 
     // Zander added: Progress Bar
     let progressView: UIProgressView = {
@@ -314,6 +317,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         progressView.isHidden = true
         return progressView
     }()
+    
+    // Alec: Address Search Bar at the bottom of screen
     lazy var searchTextField: UISearchBar = {
         let searchTextField = UISearchBar()
         searchTextField.layer.cornerRadius = 15
@@ -327,17 +332,22 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        // Setup Location
         locationManager.addDelegate(self)
         locationManager.startUpdatingLocation()
         locationManager.startUpdatingHeading()
+        
         searchCompleter.delegate = self
+        
         mapView.delegate = self
         mapView.isPitchEnabled = false
         
-        tableView.delegate = self // Set the delegate
+        tableView.delegate = self
         tableView.dataSource = self
+        
         setupUI()
-        centerViewOnUserLocation()
+        
         setupPinManagement()
         
         // Set up landmarks
@@ -345,6 +355,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         landmarkManager.delegate = self
         setupLandmarks()
         
+        centerViewOnUserLocation()
         // Add observer for pin addition
         NotificationCenter.default.addObserver(
             self,
@@ -352,6 +363,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             name: NSNotification.Name("AddPin"),
             object: nil
         )
+        // Add observer for Hard Mode Toggle
         NotificationCenter.default.addObserver(self, selector: #selector(handleHardModeToggled(_:)), name: .hardModeToggled, object: nil)
         // Add observer for end route button
         NotificationCenter.default.addObserver(self, selector: #selector(endRoute), name: .endRouteNotification, object: nil)
@@ -391,18 +403,14 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     private var tableViewHeightConstraint: NSLayoutConstraint!
     
     private func setupUI() {
-        //let overlay = HideMapOverlay()
-        //Hard Mode
-        
         view.addSubview(mapView)
         view.addSubview(searchTextField)
         view.addSubview(tableView)
         view.addSubview(compassImageView)
         view.addSubview(goButton)
         view.addSubview(progressView)
-        setupToggleButton()
+        setuptoggleCameraButton()
         
-        // Zander added: Center Go Button and Progress Bar
         NSLayoutConstraint.activate([
             goButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             goButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -49),
@@ -540,6 +548,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         }
     }
     
+    // Alec: Brings search bar up from the bottom of the screen
     func showSearch() {
         // Deactivate constraints
         hideGoButton()
@@ -552,6 +561,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         })
     }
     
+    // Alec: Returns search bar to the bottom of the screen
     func hideSearch() {
         showGoButton()
         UIView.animate(withDuration: 0.3, animations: {
@@ -563,12 +573,12 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         })
     }
   
-    // LocationManagerDelegate methods
+    // Alec: LocationManagerDelegate methods
     func didUpdateLocation(_ location: CLLocation) {
         currentLocation = location // store this location somewhere
-        if (!initialized) {
+        if (!mapIsInitialized) {
             centerViewOnUserLocation()
-            initialized = true
+            mapIsInitialized = true
         }
         
         // Zander added: calculate distance remaining if
@@ -587,6 +597,25 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             checkIfGoingRightWay(location: location)
         }
     }
+  
+    func didFailWithError(_ error: Error) {
+        print("Failed to update location: \(error)")
+    }
+    
+    func didUpdateHeading(_ heading: CLHeading) {
+        return
+    }
+    
+    // Centers Map Camera on User Location
+    private func centerViewOnUserLocation() {
+        let camera = MKMapCamera()
+        
+        camera.centerCoordinate = currentLocation.coordinate
+        camera.centerCoordinateDistance = 2000
+        camera.heading = cameraHeading
+        mapView.setCamera(camera, animated: true)
+    }
+    
     /// Lisa: Check if going in the right direction
     func checkIfGoingRightWay(location: CLLocation) {
         if wrongDirectionDetector.updateLocation(
@@ -598,23 +627,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             notificationManager.ableToSchedule = false
         }
     }
-  
-    func didFailWithError(_ error: Error) {
-        print("Failed to update location: \(error)")
-    }
     
-    func didUpdateHeading(_ heading: CLHeading) {
-        return
-    }
-    private func centerViewOnUserLocation() {
-        let camera = MKMapCamera()
-        
-        camera.centerCoordinate = currentLocation.coordinate
-        camera.centerCoordinateDistance = 2000
-        camera.heading = cameraHeading
-        mapView.setCamera(camera, animated: true)
-    }
-    
+    // Alec: Search Functionality
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         searchCompleter.queryFragment = searchText
     }
@@ -622,6 +636,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         searchBar.resignFirstResponder()
     }
+    
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
         let temp = completer.results.filter { !($0.subtitle.contains("Search Nearby")) && !($0.subtitle.contains("No Results Nearby")) && !$0.subtitle.isEmpty }
         searchResults = temp
@@ -632,6 +647,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         print("Error: \(error.localizedDescription)")
     }
     
+    // Alec: Search Results
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return searchResults.count
     }
@@ -644,13 +660,15 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         cell.detailTextLabel?.text = searchResult.subtitle
         return cell
     }
+    
+    // Alec: update path and compass, called every two seconds
     @objc func recalculateRoute() {
         createPath(from: currentLocation.coordinate, to: destinationLocation.coordinate ) { pathCreated in
             if self.oldRoute != nil && pathCreated {
                 self.mapView.removeOverlay(self.oldRoute!)
             }
         }
-        findBearings(userLocation: currentLocation.coordinate)
+        updateDestinationBearings(userLocation: currentLocation.coordinate) // Updates Compass Next Step Coordinates
         if oldRoute != routeOverlay && oldRoute != nil{
             self.mapView.removeOverlay(self.oldRoute!)
         }
@@ -660,14 +678,17 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         }
     }
     
+    // Alec: Function called when an address is selected
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         hideSearch()
-        //remove the selection after the row is tapped
+        
+        // Get Address Selected
         tableView.deselectRow(at: indexPath, animated: true)
         let selectedResult = searchResults[indexPath.row]
         let searchRequest = MKLocalSearch.Request(completion: selectedResult)
         let search = MKLocalSearch(request: searchRequest)
         
+        // Search for coordinates
         search.start { [weak self] (response, error) in
             guard let self = self else { return }
             if let error = error {
@@ -683,11 +704,12 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
             compassImageView.compass.destinationCoordinates = destinationLocation.coordinate
             let name = mapItem.name ?? selectedResult.title
             
-            
+            // Remove previous destinations
             self.mapView.removeAnnotations(self.annotationList)
             self.annotationList.removeAll()
             
-            let annotation = MKPointAnnotation()//use mkpoint to display possible locations
+            // Add destination annotation
+            let annotation = MKPointAnnotation()
             annotation.coordinate = coordinate
             annotation.title = name
             self.mapView.addAnnotation(annotation)
@@ -701,40 +723,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         }
     }
     
-    func convertAddressToAnnotation(name: String, address: String, camera: Bool = false, path: Bool = false) {
-        geocoder.geocodeAddressString(address) { (placemarks, error) in
-            if let error = error {
-                print("Error: \(error.localizedDescription)")
-                return
-            }
-            guard let placemarks = placemarks, let location = placemarks.first?.location else {
-                print("No location found")
-                return
-            }
-            // Use the location (latitude, longitude)
-            let coordinate = location.coordinate
-            print("Latitude: \(coordinate.latitude), Longitude: \(coordinate.longitude)")
-            
-            let annotation = MKPointAnnotation()
-            annotation.coordinate = coordinate
-            //you can add whatever info you want to your pin
-            annotation.title = name
-            for a in self.annotationList {
-                self.mapView.removeAnnotation(a)
-            }
-            self.mapView.addAnnotation(annotation)
-            self.annotationList.append(annotation)
-            if (camera) {
-                self.centerMapOnCoordinates(coord1: self.currentLocation.coordinate, coord2: coordinate)
-            }
-            if (path) {
-                self.clearPath()
-                self.createPath(from: self.currentLocation.coordinate, to: coordinate) {_ in}
-            }
-        }
-    }
-    
-    func findBearings(userLocation: CLLocationCoordinate2D) {
+    // Updates the compass's destination information
+    func updateDestinationBearings(userLocation: CLLocationCoordinate2D) {
         if let currentRoute {
             let route_points = currentRoute.steps[0].polyline.points()
             let next_step = route_points[1]
@@ -742,6 +732,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         }
     }
     
+    // Alec: Center Map camera on two coordinates
     func centerMapOnCoordinates(coord1: CLLocationCoordinate2D, coord2: CLLocationCoordinate2D) {
         // Zander added: hide the Progress Bar and Go
         // Button
@@ -768,22 +759,25 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         
         // Zander added: show Go button after map path is
         // centered
-        //Alec: TODO change this
         showGoButton()
     }
 
+    // Alec: Creates a path from one coordinate to another, often user location to destination
     func createPath(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, completion: @escaping (Bool) -> Void) {
+        // Initialize Data
         let sourcePlacemark = MKPlacemark(coordinate: source)
         let destinationPlacemark = MKPlacemark(coordinate: destination)
         let sourceMapItem = MKMapItem(placemark: sourcePlacemark)
         let destinationMapItem = MKMapItem(placemark: destinationPlacemark)
+        
+        // Create Request
         let directionsRequest = MKDirections.Request()
         directionsRequest.source = sourceMapItem
         directionsRequest.destination = destinationMapItem
         directionsRequest.transportType = .walking
         let directions = MKDirections(request: directionsRequest)
         
-        
+        // Calculates Path
         directions.calculate { [weak self] (response, error) in
             guard let self = self else {
                 completion(false)
@@ -797,6 +791,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
                 return
             }
             if let route = response.routes.first {
+                // The calculation succeeds
                 self.currentRoute = route
                 self.routeOverlay = self.currentRoute?.polyline
                 self.mapView.addOverlay(self.routeOverlay!, level: .aboveLabels)
@@ -807,7 +802,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
         }
     }
 
-    
+    // Alec: Clears all path overlays from the map
     func clearPath() {
         if let routeOverlay = routeOverlay {
             mapView.removeOverlay(routeOverlay)
@@ -818,6 +813,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UISearchBarDe
     }
 }
 
+// Renders the path and hard mode overlays to the map
 extension ViewController: MKMapViewDelegate {
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
         if overlay is HideMapOverlay {

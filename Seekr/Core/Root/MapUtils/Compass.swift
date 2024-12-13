@@ -4,6 +4,8 @@
 //
 //  Created by Alec Raymond on 11/19/24.
 //
+
+
 import Foundation
 import CoreLocation
 
@@ -18,7 +20,10 @@ class Compass: NSObject, CLLocationManagerDelegate, LocationManagerDelegate {
     
     var currentHeading = CGFloat()
     var destinationCoordinates = CLLocationCoordinate2D()
+    
+    // Coordinates of the next step on the calulated path
     var currentNextStepCoordinates = CLLocationCoordinate2D()
+    
     var currentLocationCoordinates = CLLocationCoordinate2D()
     
     override init() {
@@ -31,16 +36,20 @@ class Compass: NSObject, CLLocationManagerDelegate, LocationManagerDelegate {
         currentLocationCoordinates = location.coordinate
     }
     
+    // Alec: Turns raw heading data into compass output
     func didUpdateHeading(_ heading: CLHeading) {
         self.currentHeading = CGFloat(heading.trueHeading) * .pi / 180
         var destinationBearing = calculateBearing(from: currentLocationCoordinates, to: destinationCoordinates)
         
+        // Checks for all necessary data
         if (destinationCoordinates.latitude == 0.0) {
             updateBearing(newBearing: currentHeading)
             return
         } else if (currentNextStepCoordinates.latitude == 0.0) {
             updateBearing(newBearing: ((destinationBearing - currentHeading) + (2 * .pi)).truncatingRemainder(dividingBy: 2 * .pi))
         }
+        
+        // Calculate the weighted average of the bearing between the destination and the next step coordinates
         var nextStepBearing = calculateBearing(from: currentLocationCoordinates, to: currentNextStepCoordinates)
         if abs(destinationBearing - nextStepBearing) > .pi {
             if destinationBearing < nextStepBearing {
@@ -49,12 +58,13 @@ class Compass: NSObject, CLLocationManagerDelegate, LocationManagerDelegate {
                 nextStepBearing += 2 * .pi
             }
         }
-        // Calculate the weighted average
         let weightedAngle = (0.8 * destinationBearing + 0.2 * nextStepBearing).truncatingRemainder(dividingBy: 2 * .pi)
+        
         let compassBearing = ((weightedAngle - currentHeading) + (2 * .pi)).truncatingRemainder(dividingBy: 2 * .pi) // Normalize to 0-360
         updateBearing(newBearing: compassBearing)
     }
-        
+    
+    // Calculates the compass bearing from one coordinate to another
     func calculateBearing(from coordinate1: CLLocationCoordinate2D, to coordinate2: CLLocationCoordinate2D) -> CLLocationDirection {
         let deltaLongitude = coordinate2.longitude - coordinate1.longitude
         let y = sin(deltaLongitude) * cos(coordinate2.latitude)
@@ -81,6 +91,7 @@ class Compass: NSObject, CLLocationManagerDelegate, LocationManagerDelegate {
 
 import UIKit
 
+// Colored Compass Setup
 class CompassImageView: UIView, CompassDelegate {
     let compass = Compass()
     
